@@ -159,7 +159,7 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
   const svgW = 680;
   const svgH = 220;
   const padL = 46;
-  const padR = 16;
+  const padR = 30;
   const padT = 18;
   const padB = 28;
   const plotW = svgW - padL - padR;
