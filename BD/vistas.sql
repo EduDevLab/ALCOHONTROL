@@ -1,4 +1,4 @@
-USE [ModeloramaDB]
+USE [alcohontrol]
 GO
 
 /****** Objeto: View [dbo].[Vista_Reporte_Productos] ******/

@@ -1,4 +1,4 @@
-USE [ModeloramaDB]
+USE [alcohontrol]
 GO
 
 /****** Objeto: Trigger [dbo].[TR_DetalleVenta_Insert_DescontarStock] ******/
