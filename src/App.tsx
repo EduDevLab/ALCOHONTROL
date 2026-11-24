@@ -1,4 +1,10 @@
 import { useEffect, useState } from 'react';
+import { CortesView } from './components/CortesView.tsx';
+import { CroquisView } from './components/CroquisView.tsx';
+import { DashboardView } from './components/DashboardView.tsx';
+import { EmpleadosView } from './components/EmpleadosView.tsx';
+import { InventarioView } from './components/InventarioView.tsx';
+import { PosView } from './components/PosView.tsx';
 import { Shell } from './components/Shell.tsx';
 import { TurnoSelector } from './components/TurnoSelector.tsx';
 import { api } from './services/api.ts';
@@ -20,6 +26,7 @@ export function App() {
   const [vistaActiva, setVistaActiva] = useState<VistaId>('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
   const [stockBajo, setStockBajo] = useState<ProductoStockBajo[]>([]);
+  const [alertTick, setAlertTick] = useState(0);
 
   useEffect(() => {
     if (!empleado) return;
@@ -37,7 +44,7 @@ export function App() {
     return () => {
       cancelled = true;
     };
-  }, [empleado, vistaActiva]);
+  }, [empleado, vistaActiva, alertTick]);
 
   const handleSelectEmpleado = (selected: Empleado) => {
     setEmpleado(selected);
@@ -50,6 +57,8 @@ export function App() {
     localStorage.removeItem(STORAGE_KEY);
     setSearchQuery('');
   };
+
+  const refreshAlerts = () => setAlertTick((t) => t + 1);
 
   if (!empleado) {
     return <TurnoSelector onSelect={handleSelectEmpleado} />;
@@ -68,16 +77,20 @@ export function App() {
       onSearchChange={setSearchQuery}
       stockBajo={stockBajo}
     >
-      <div className="surface-panel" style={{ padding: 24 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-          <h2 style={{ margin: 0, fontSize: 18 }}>Módulo: {vistaEfectiva}</h2>
-          <span className="badge badge-ok">API conectada · Base lista</span>
-        </div>
-        <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: 13 }}>
-          Shell de escritorio y capa de servicios listos. Siguiente paso: Fase 3 para implementar las pantallas
-          operativas.
-        </p>
-      </div>
+      {vistaEfectiva === 'dashboard' && (
+        <DashboardView searchQuery={searchQuery} onNavigate={setVistaActiva} />
+      )}
+      {vistaEfectiva === 'pos' && (
+        <PosView empleado={empleado} searchQuery={searchQuery} onVentaCompletada={refreshAlerts} />
+      )}
+      {vistaEfectiva === 'croquis' && (
+        <CroquisView searchQuery={searchQuery} onStockChanged={refreshAlerts} />
+      )}
+      {vistaEfectiva === 'inventario' && (
+        <InventarioView searchQuery={searchQuery} onStockChanged={refreshAlerts} />
+      )}
+      {vistaEfectiva === 'cortes' && <CortesView />}
+      {vistaEfectiva === 'empleados' && <EmpleadosView />}
     </Shell>
   );
 }

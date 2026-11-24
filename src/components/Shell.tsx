@@ -16,18 +16,17 @@ import { esAdministrador, type Empleado, type ProductoStockBajo, type VistaId } 
 interface NavItem {
   id: VistaId;
   label: string;
-  subtitle: string;
   icon: Icon;
   adminOnly?: boolean;
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { id: 'dashboard', label: 'Resumen', subtitle: 'Estado general del expendio', icon: SquaresFour },
-  { id: 'pos', label: 'Punto de Venta', subtitle: 'Registro de bajas y cobro en caja', icon: ShoppingCart },
-  { id: 'croquis', label: 'Croquis', subtitle: 'Mapa de zonas y stock en vivo', icon: MapTrifold },
-  { id: 'inventario', label: 'Inventario', subtitle: 'Productos, categorías y proveedores', icon: Package },
-  { id: 'cortes', label: 'Cortes y Reportes', subtitle: 'Cortes diarios, semanales y mensuales', icon: ChartBar },
-  { id: 'empleados', label: 'Personal', subtitle: 'Administración de empleados', icon: Users, adminOnly: true },
+  { id: 'dashboard', label: 'Resumen Operativo', icon: SquaresFour },
+  { id: 'pos', label: 'Punto de Venta', icon: ShoppingCart },
+  { id: 'croquis', label: 'Croquis del Expendio', icon: MapTrifold },
+  { id: 'inventario', label: 'Inventario y Catálogos', icon: Package },
+  { id: 'cortes', label: 'Cortes y Reportes', icon: ChartBar },
+  { id: 'empleados', label: 'Personal', icon: Users, adminOnly: true },
 ];
 
 interface ShellProps {
@@ -39,6 +38,12 @@ interface ShellProps {
   onSearchChange: (value: string) => void;
   stockBajo: ProductoStockBajo[];
   children: ReactNode;
+}
+
+function getInitials(nombre: string): string {
+  const parts = nombre.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0] ?? ''}${parts[1][0] ?? ''}`.toUpperCase();
 }
 
 export function Shell({
@@ -54,16 +59,17 @@ export function Shell({
   const [alertsOpen, setAlertsOpen] = useState(false);
   const isAdmin = esAdministrador(empleado.Puesto);
   const visibleNav = NAV_ITEMS.filter((item) => !item.adminOnly || isAdmin);
-  const currentMeta = visibleNav.find((item) => item.id === vistaActiva) ?? visibleNav[0];
 
   return (
     <div className="app-shell">
+      <div className="app-ambient-glow" aria-hidden="true" />
+
       <aside className="app-sidebar" aria-label="Navegación principal">
-        <div className="sidebar-brand" title="Alcohontrol">
+        <div className="sidebar-brand" title="Alcohontrol · Expendio Pacífico">
           AC
         </div>
 
-        <nav className="sidebar-nav">
+        <nav className="sidebar-rail">
           {visibleNav.map((item) => {
             const IconComponent = item.icon;
             const active = item.id === vistaActiva;
@@ -77,53 +83,47 @@ export function Shell({
                 aria-label={item.label}
                 aria-current={active ? 'page' : undefined}
               >
-                <IconComponent size={20} weight={active ? 'duotone' : 'regular'} />
+                <IconComponent size={20} weight={active ? 'bold' : 'regular'} />
               </button>
             );
           })}
         </nav>
-
-        <button
-          type="button"
-          className="nav-icon-btn"
-          onClick={onCerrarTurno}
-          title="Cambiar de empleado / Cerrar turno"
-          aria-label="Cambiar de empleado"
-        >
-          <SignOut size={18} />
-        </button>
       </aside>
 
       <header className="app-topbar">
-        <div className="topbar-title-group">
-          <h1 className="topbar-title">{currentMeta.label}</h1>
-          <span className="topbar-subtitle">{currentMeta.subtitle}</span>
+        <div className="topbar-search">
+          <MagnifyingGlass size={16} />
+          <input
+            type="search"
+            className="input"
+            placeholder="Buscar producto, venta o zona…"
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
+            aria-label="Buscador contextual"
+          />
         </div>
 
         <div className="topbar-actions">
-          <div className="topbar-search">
-            <MagnifyingGlass size={14} />
-            <input
-              type="search"
-              className="input"
-              placeholder="Buscar producto, venta o zona…"
-              value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
-              aria-label="Buscador contextual"
-            />
-          </div>
+          <button
+            type="button"
+            className="btn-circle"
+            onClick={onCerrarTurno}
+            title="Cambiar de empleado / Cerrar turno"
+            aria-label="Cambiar de empleado"
+          >
+            <SignOut size={17} />
+          </button>
 
           <div className="alerts-wrapper">
             <button
               type="button"
-              className="btn"
-              style={{ width: 36, padding: 0, position: 'relative' }}
+              className="btn-circle"
               onClick={() => setAlertsOpen((prev) => !prev)}
               aria-label="Alertas de stock bajo"
-              title="Productos con stock bajo (<= 30)"
+              title="Productos con stock bajo (≤ 30)"
             >
-              <Bell size={16} />
-              {stockBajo.length > 0 && <span className="alerts-badge num-tabular">{stockBajo.length}</span>}
+              <Bell size={17} />
+              {stockBajo.length > 0 && <span className="alerts-dot" />}
             </button>
 
             {alertsOpen && (
@@ -201,24 +201,12 @@ export function Shell({
             )}
           </div>
 
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              paddingLeft: 12,
-              borderLeft: '1px solid var(--border-subtle)',
-            }}
-          >
-            <div style={{ textAlign: 'right', lineHeight: 1.25 }}>
-              <div style={{ fontSize: 13, fontWeight: 600 }}>{empleado.Nombre}</div>
-              <div style={{ fontSize: 11, color: isAdmin ? 'var(--accent-gold)' : 'var(--text-muted)' }}>
-                {empleado.Puesto}
-              </div>
+          <div className="topbar-user">
+            <div className="topbar-avatar">{getInitials(empleado.Nombre)}</div>
+            <div style={{ lineHeight: 1.25 }}>
+              <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>{empleado.Nombre}</div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{empleado.Puesto}</div>
             </div>
-            <button type="button" className="btn btn-ghost" style={{ padding: '0 10px' }} onClick={onCerrarTurno}>
-              Cambiar
-            </button>
           </div>
         </div>
       </header>
