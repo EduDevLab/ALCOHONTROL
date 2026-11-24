@@ -1,31 +1,32 @@
 import { useState, type ReactNode } from 'react';
 import {
-  BarChart3,
   Bell,
-  LayoutDashboard,
-  LogOut,
-  Map,
+  ChartBar,
+  MagnifyingGlass,
+  MapTrifold,
   Package,
-  Search,
   ShoppingCart,
+  SignOut,
+  SquaresFour,
   Users,
-} from 'lucide-react';
+  type Icon,
+} from '@phosphor-icons/react';
 import { esAdministrador, type Empleado, type ProductoStockBajo, type VistaId } from '../types/alcohontrol.ts';
 
 interface NavItem {
   id: VistaId;
   label: string;
   subtitle: string;
-  icon: typeof LayoutDashboard;
+  icon: Icon;
   adminOnly?: boolean;
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { id: 'dashboard', label: 'Resumen', subtitle: 'Estado general del expendio', icon: LayoutDashboard },
+  { id: 'dashboard', label: 'Resumen', subtitle: 'Estado general del expendio', icon: SquaresFour },
   { id: 'pos', label: 'Punto de Venta', subtitle: 'Registro de bajas y cobro en caja', icon: ShoppingCart },
-  { id: 'croquis', label: 'Croquis', subtitle: 'Mapa de zonas y stock en vivo', icon: Map },
+  { id: 'croquis', label: 'Croquis', subtitle: 'Mapa de zonas y stock en vivo', icon: MapTrifold },
   { id: 'inventario', label: 'Inventario', subtitle: 'Productos, categorías y proveedores', icon: Package },
-  { id: 'cortes', label: 'Cortes y Reportes', subtitle: 'Cortes diarios, semanales y mensuales', icon: BarChart3 },
+  { id: 'cortes', label: 'Cortes y Reportes', subtitle: 'Cortes diarios, semanales y mensuales', icon: ChartBar },
   { id: 'empleados', label: 'Personal', subtitle: 'Administración de empleados', icon: Users, adminOnly: true },
 ];
 
@@ -64,7 +65,7 @@ export function Shell({
 
         <nav className="sidebar-nav">
           {visibleNav.map((item) => {
-            const Icon = item.icon;
+            const IconComponent = item.icon;
             const active = item.id === vistaActiva;
             return (
               <button
@@ -76,7 +77,7 @@ export function Shell({
                 aria-label={item.label}
                 aria-current={active ? 'page' : undefined}
               >
-                <Icon size={20} strokeWidth={active ? 2.2 : 1.75} />
+                <IconComponent size={20} weight={active ? 'duotone' : 'regular'} />
               </button>
             );
           })}
@@ -89,7 +90,7 @@ export function Shell({
           title="Cambiar de empleado / Cerrar turno"
           aria-label="Cambiar de empleado"
         >
-          <LogOut size={18} />
+          <SignOut size={18} />
         </button>
       </aside>
 
@@ -101,7 +102,7 @@ export function Shell({
 
         <div className="topbar-actions">
           <div className="topbar-search">
-            <Search size={14} />
+            <MagnifyingGlass size={14} />
             <input
               type="search"
               className="input"

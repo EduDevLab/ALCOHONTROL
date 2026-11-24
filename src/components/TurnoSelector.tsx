@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ArrowRight, RefreshCw, ShieldCheck, User } from 'lucide-react';
+import { ArrowRight, ArrowsClockwise, ShieldCheck, User } from '@phosphor-icons/react';
 import { api } from '../services/api.ts';
 import { esAdministrador, type Empleado } from '../types/alcohontrol.ts';
 
@@ -85,7 +85,7 @@ export function TurnoSelector({ onSelect }: TurnoSelectorProps) {
             <div className="badge badge-danger">Error de conexión</div>
             <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: 13 }}>{error}</p>
             <button type="button" className="btn" onClick={() => void cargarEmpleados()}>
-              <RefreshCw size={14} />
+              <ArrowsClockwise size={14} weight="bold" />
               Reintentar
             </button>
           </div>
