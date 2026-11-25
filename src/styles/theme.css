@@ -832,8 +832,7 @@ body,
   transition: opacity 150ms var(--ease-out), transform 150ms var(--ease-out);
 }
 
-.pos-product-card:hover .pos-pack-actions,
-.pos-product-card:focus-within .pos-pack-actions {
+.pos-product-card:hover .pos-pack-actions {
   opacity: 1;
   transform: translateY(0);
   pointer-events: auto;

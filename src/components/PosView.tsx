@@ -334,6 +334,12 @@ export function PosView({ empleado, searchQuery, onVentaCompletada }: PosViewPro
                           onClick={() => {
                             if (!agotado && !lleno) agregarCantidad(p, 1);
                           }}
+                          onContextMenu={(e) => {
+                            e.preventDefault();
+                            if (enCarrito > 0) {
+                              cambiarCantidad(p.IdProducto, -1);
+                            }
+                          }}
                           onKeyDown={(e) => {
                             if (!agotado && !lleno && (e.key === 'Enter' || e.key === ' ')) {
                               e.preventDefault();
@@ -531,7 +537,7 @@ export function PosView({ empleado, searchQuery, onVentaCompletada }: PosViewPro
                   }}
                 >
                   <ShoppingCart size={28} style={{ marginBottom: 8, opacity: 0.6 }} />
-                  <div style={{ fontSize: 13 }}>Presiona una card para agregar 1 unidad al ticket.</div>
+                  <div style={{ fontSize: 13 }}>Presiona un producto del catálogo para agregarlo</div>
                 </div>
               ) : (
                 <div className="scroll-area" style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1, paddingRight: 4 }}>
@@ -606,6 +612,7 @@ export function PosView({ empleado, searchQuery, onVentaCompletada }: PosViewPro
                 <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6 }}>Método de pago</div>
                 <div
                   style={{
+                    position: 'relative',
                     display: 'grid',
                     gridTemplateColumns: 'repeat(3, 1fr)',
                     background: 'var(--bg-canvas)',
@@ -615,6 +622,22 @@ export function PosView({ empleado, searchQuery, onVentaCompletada }: PosViewPro
                     gap: 3,
                   }}
                 >
+                  <span
+                    aria-hidden="true"
+                    style={{
+                      position: 'absolute',
+                      top: 3,
+                      bottom: 3,
+                      left: 3,
+                      width: 'calc((100% - 6px) / 3)',
+                      borderRadius: 9,
+                      background: 'var(--accent-gold)',
+                      transform: `translateX(${METODOS_PAGO.findIndex((m) => m.id === metodoPago) * 100}%)`,
+                      transition: 'transform 220ms var(--ease-out)',
+                      zIndex: 0,
+                      pointerEvents: 'none',
+                    }}
+                  />
                   {METODOS_PAGO.map((m) => {
                     const selected = metodoPago === m.id;
                     const IconComp = m.icon;
@@ -639,65 +662,63 @@ export function PosView({ empleado, searchQuery, onVentaCompletada }: PosViewPro
                           justifyContent: 'center',
                           gap: 6,
                           transition: 'color 150ms ease',
+                          zIndex: 1,
                         }}
                       >
-                        {selected && (
-                          <motion.span
-                            layoutId="pos-pay-pill"
-                            transition={{ type: 'spring', stiffness: 420, damping: 32 }}
-                            style={{
-                              position: 'absolute',
-                              inset: 0,
-                              borderRadius: 9,
-                              background: 'var(--accent-gold)',
-                              zIndex: 0,
-                            }}
-                          />
-                        )}
-                        <IconComp size={14} style={{ position: 'relative', zIndex: 1 }} />
-                        <span style={{ position: 'relative', zIndex: 1 }}>{m.label}</span>
+                        <IconComp size={14} />
+                        <span>{m.label}</span>
                       </button>
                     );
                   })}
                 </div>
 
-                {metodoPago === 'Ambos' && cart.length > 0 && (
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 8 }}>
-                    <div>
-                      <label style={{ display: 'block', fontSize: 11, color: 'var(--text-muted)', marginBottom: 3 }}>
-                        Efectivo
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        max={totalTicket}
-                        step="0.50"
-                        className="input num-tabular"
-                        style={{ height: 32, fontSize: 12 }}
-                        placeholder="$0.00"
-                        value={montoEfectivo}
-                        onChange={(e) => setMontoEfectivo(e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: 11, color: 'var(--text-muted)', marginBottom: 3 }}>
-                        Tarjeta
-                      </label>
-                      <div
-                        className="input num-tabular"
-                        style={{
-                          height: 32,
-                          fontSize: 12,
-                          display: 'flex',
-                          alignItems: 'center',
-                          color: 'var(--text-secondary)',
-                        }}
-                      >
-                        {formatCurrency(tarjetaMixta)}
+                <AnimatePresence initial={false}>
+                  {metodoPago === 'Ambos' && cart.length > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                      animate={{ opacity: 1, height: 'auto', marginTop: 8 }}
+                      exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                      transition={{ duration: 0.2, ease: EASE_OUT }}
+                      style={{ overflow: 'hidden' }}
+                    >
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                        <div>
+                          <label style={{ display: 'block', fontSize: 11, color: 'var(--text-muted)', marginBottom: 3 }}>
+                            Efectivo
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            max={totalTicket}
+                            step="0.50"
+                            className="input num-tabular"
+                            style={{ height: 32, fontSize: 12 }}
+                            placeholder="$0.00"
+                            value={montoEfectivo}
+                            onChange={(e) => setMontoEfectivo(e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', fontSize: 11, color: 'var(--text-muted)', marginBottom: 3 }}>
+                            Tarjeta
+                          </label>
+                          <div
+                            className="input num-tabular"
+                            style={{
+                              height: 32,
+                              fontSize: 12,
+                              display: 'flex',
+                              alignItems: 'center',
+                              color: 'var(--text-secondary)',
+                            }}
+                          >
+                            {formatCurrency(tarjetaMixta)}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: 12, color: 'var(--text-secondary)' }}>
