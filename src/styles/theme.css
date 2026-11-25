@@ -865,3 +865,280 @@ body,
   opacity: 0.35;
   cursor: not-allowed;
 }
+
+/* ============================================================================
+   CROQUIS DEL EXPENDIO — INTERACTIVE FLOORPLAN & RESIZE HANDLES
+   ============================================================================ */
+
+.croquis-stage {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding: 16px;
+  border-radius: var(--radius-xl);
+  background: #06070a;
+  border: 1px solid var(--border-subtle);
+}
+
+.croquis-canvas {
+  position: relative;
+  flex-shrink: 0;
+  background: var(--bg-canvas);
+  background-image: radial-gradient(rgba(148, 163, 184, 0.13) 1px, transparent 1px);
+  background-size: 20px 20px;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-strong);
+  user-select: none;
+  touch-action: none;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.croquis-canvas.is-editing {
+  border-color: rgba(229, 169, 59, 0.42);
+  box-shadow: inset 0 0 0 1px rgba(229, 169, 59, 0.12);
+}
+
+.croquis-canvas.is-resizing-canvas {
+  border-color: var(--accent-gold);
+  box-shadow:
+    0 0 0 1px rgba(229, 169, 59, 0.35),
+    0 0 28px rgba(229, 169, 59, 0.16);
+}
+
+.croquis-zone {
+  position: absolute;
+  border-radius: var(--radius-xl);
+  padding: 11px 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-strong);
+  user-select: none;
+  touch-action: none;
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.croquis-zone:hover {
+  border-color: rgba(229, 169, 59, 0.45);
+  background: var(--bg-elevated);
+}
+
+.croquis-zone.is-selected {
+  background: var(--bg-hover);
+  border-color: var(--accent-gold);
+  box-shadow: 0 0 22px rgba(229, 169, 59, 0.18);
+  z-index: 4;
+}
+
+.croquis-zone.is-search-match:not(.is-selected) {
+  border-color: rgba(229, 169, 59, 0.65);
+  box-shadow: 0 0 16px rgba(229, 169, 59, 0.14);
+}
+
+.croquis-zone.is-interacting {
+  z-index: 10;
+  box-shadow:
+    0 12px 30px -10px rgba(0, 0, 0, 0.75),
+    0 0 0 1px var(--accent-gold);
+}
+
+/* Zone resize handles (edges + corners) */
+.croquis-zone-handle {
+  position: absolute;
+  z-index: 3;
+  touch-action: none;
+}
+
+.croquis-zone-handle-n {
+  top: -4px;
+  left: 10px;
+  right: 10px;
+  height: 8px;
+  cursor: ns-resize;
+}
+
+.croquis-zone-handle-s {
+  bottom: -4px;
+  left: 10px;
+  right: 10px;
+  height: 8px;
+  cursor: ns-resize;
+}
+
+.croquis-zone-handle-e {
+  right: -4px;
+  top: 10px;
+  bottom: 10px;
+  width: 8px;
+  cursor: ew-resize;
+}
+
+.croquis-zone-handle-w {
+  left: -4px;
+  top: 10px;
+  bottom: 10px;
+  width: 8px;
+  cursor: ew-resize;
+}
+
+.croquis-zone-handle-corner {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 140ms ease, transform 120ms var(--ease-out);
+  z-index: 5;
+}
+
+.croquis-zone-handle-corner::after {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent-gold);
+  border: 2px solid var(--bg-canvas);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.55);
+  transition: transform 120ms var(--ease-out);
+}
+
+.croquis-zone:hover .croquis-zone-handle-corner,
+.croquis-zone.is-selected .croquis-zone-handle-corner,
+.croquis-zone.is-interacting .croquis-zone-handle-corner {
+  opacity: 1;
+}
+
+.croquis-zone-handle-corner:hover::after {
+  transform: scale(1.2);
+}
+
+.croquis-zone-handle-nw {
+  top: -8px;
+  left: -8px;
+  cursor: nwse-resize;
+}
+
+.croquis-zone-handle-ne {
+  top: -8px;
+  right: -8px;
+  cursor: nesw-resize;
+}
+
+.croquis-zone-handle-sw {
+  bottom: -8px;
+  left: -8px;
+  cursor: nesw-resize;
+}
+
+.croquis-zone-handle-se {
+  bottom: -8px;
+  right: -8px;
+  cursor: nwse-resize;
+}
+
+/* Outer floorplan container resize handles */
+.croquis-canvas-handle {
+  position: absolute;
+  z-index: 12;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: none;
+}
+
+.croquis-canvas-handle-e {
+  right: -8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 64px;
+  cursor: ew-resize;
+}
+
+.croquis-canvas-handle-e::after {
+  content: '';
+  width: 4px;
+  height: 36px;
+  border-radius: 999px;
+  background: rgba(229, 169, 59, 0.45);
+  border: 1px solid rgba(229, 169, 59, 0.7);
+  transition: background-color 140ms ease, transform 120ms var(--ease-out);
+}
+
+.croquis-canvas-handle-s {
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  height: 16px;
+  width: 64px;
+  cursor: ns-resize;
+}
+
+.croquis-canvas-handle-s::after {
+  content: '';
+  height: 4px;
+  width: 36px;
+  border-radius: 999px;
+  background: rgba(229, 169, 59, 0.45);
+  border: 1px solid rgba(229, 169, 59, 0.7);
+  transition: background-color 140ms ease, transform 120ms var(--ease-out);
+}
+
+.croquis-canvas-handle-e:hover::after,
+.croquis-canvas-handle-s:hover::after,
+.croquis-canvas.is-resizing-canvas .croquis-canvas-handle-e::after,
+.croquis-canvas.is-resizing-canvas .croquis-canvas-handle-s::after {
+  background: var(--accent-gold);
+  transform: scale(1.1);
+}
+
+.croquis-canvas-handle-se {
+  right: -7px;
+  bottom: -7px;
+  width: 24px;
+  height: 24px;
+  cursor: nwse-resize;
+}
+
+.croquis-canvas-handle-se::after {
+  content: '';
+  width: 14px;
+  height: 14px;
+  border-right: 3px solid var(--accent-gold);
+  border-bottom: 3px solid var(--accent-gold);
+  border-bottom-right-radius: 7px;
+  transition: transform 120ms var(--ease-out);
+}
+
+.croquis-canvas-handle-se:hover::after,
+.croquis-canvas.is-resizing-canvas .croquis-canvas-handle-se::after {
+  transform: scale(1.16);
+}
+
+/* Floating live dimension badge */
+.croquis-dim-badge {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(8, 9, 12, 0.92);
+  border: 1px solid rgba(229, 169, 59, 0.6);
+  color: var(--accent-gold);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 15;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.55);
+}

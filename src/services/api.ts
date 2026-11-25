@@ -170,10 +170,14 @@ export const api = {
 
   croquis: {
     obtener: () => request<CroquisResponse>('/croquis'),
-    guardar: (zonas: Array<Pick<ZonaCroquis, 'id' | 'nombre' | 'x' | 'y' | 'width' | 'height' | 'color' | 'productos'>>) =>
+    guardar: (payload: {
+      zonas: Array<Pick<ZonaCroquis, 'id' | 'nombre' | 'x' | 'y' | 'width' | 'height' | 'color' | 'productos'>>;
+      canvasWidth: number;
+      canvasHeight: number;
+    }) =>
       request<CroquisResponse>('/croquis', {
         method: 'PUT',
-        body: JSON.stringify({ zonas }),
+        body: JSON.stringify(payload),
       }),
   },
 };

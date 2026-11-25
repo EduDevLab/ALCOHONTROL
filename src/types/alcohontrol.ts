@@ -125,6 +125,8 @@ export interface ZonaCroquis {
 
 export interface CroquisResponse {
   actualizadoEn: string;
+  canvasWidth: number;
+  canvasHeight: number;
   zonas: ZonaCroquis[];
 }
 

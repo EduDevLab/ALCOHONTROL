@@ -12,6 +12,19 @@ const __dirname = path.dirname(__filename);
 const DATA_DIR = path.resolve(__dirname, '../data');
 const CROQUIS_PATH = path.join(DATA_DIR, 'croquis.json');
 
+const DEFAULT_CANVAS_W = 1100;
+const DEFAULT_CANVAS_H = 540;
+const MIN_CANVAS_W = 480;
+const MAX_CANVAS_W = 1800;
+const MIN_CANVAS_H = 280;
+const MAX_CANVAS_H = 1000;
+
+function clampDimension(value: unknown, fallback: number, min: number, max: number): number {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return fallback;
+  return Math.max(min, Math.min(max, Math.round(num)));
+}
+
 export interface ZonaCroquisConfig {
   id: string;
   nombre: string;
@@ -25,11 +38,15 @@ export interface ZonaCroquisConfig {
 
 export interface CroquisFile {
   zonas: ZonaCroquisConfig[];
+  canvasWidth?: number;
+  canvasHeight?: number;
   actualizadoEn: string;
 }
 
 const DEFAULT_CROQUIS: CroquisFile = {
   actualizadoEn: new Date().toISOString(),
+  canvasWidth: DEFAULT_CANVAS_W,
+  canvasHeight: DEFAULT_CANVAS_H,
   zonas: [
     { id: 'bodega', nombre: 'Bodega', x: 40, y: 40, width: 320, height: 220, productos: [] },
     { id: 'refrigeradores', nombre: 'Refrigeradores', x: 400, y: 40, width: 360, height: 220, productos: [] },
@@ -88,6 +105,8 @@ async function enrichCroquis(croquis: CroquisFile) {
 
   return {
     actualizadoEn: croquis.actualizadoEn,
+    canvasWidth: clampDimension(croquis.canvasWidth, DEFAULT_CANVAS_W, MIN_CANVAS_W, MAX_CANVAS_W),
+    canvasHeight: clampDimension(croquis.canvasHeight, DEFAULT_CANVAS_H, MIN_CANVAS_H, MAX_CANVAS_H),
     zonas: zonasEnriquecidas,
   };
 }
@@ -103,11 +122,14 @@ croquisRouter.get('/croquis', async (_req, res) => {
 });
 
 croquisRouter.put('/croquis', async (req, res) => {
-  const { zonas } = req.body ?? {};
+  const { zonas, canvasWidth, canvasHeight } = req.body ?? {};
   if (!Array.isArray(zonas)) {
     res.status(400).json({ error: 'El cuerpo debe incluir un arreglo "zonas".' });
     return;
   }
+
+  const sanitizedCanvasWidth = clampDimension(canvasWidth, DEFAULT_CANVAS_W, MIN_CANVAS_W, MAX_CANVAS_W);
+  const sanitizedCanvasHeight = clampDimension(canvasHeight, DEFAULT_CANVAS_H, MIN_CANVAS_H, MAX_CANVAS_H);
 
   const sanitized: ZonaCroquisConfig[] = [];
   for (const z of zonas) {
@@ -150,6 +172,8 @@ croquisRouter.put('/croquis', async (req, res) => {
   try {
     const payload: CroquisFile = {
       actualizadoEn: new Date().toISOString(),
+      canvasWidth: sanitizedCanvasWidth,
+      canvasHeight: sanitizedCanvasHeight,
       zonas: sanitized,
     };
     await fs.mkdir(DATA_DIR, { recursive: true });
