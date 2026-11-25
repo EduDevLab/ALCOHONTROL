@@ -5,8 +5,9 @@ import {
   PencilSimple,
   Plus,
   Trash,
-  WarningCircle,
 } from '@phosphor-icons/react';
+import { ErrorCard } from './ui/ErrorCard.tsx';
+import { StockBadge } from './ui/StockBadge.tsx';
 import { api } from '../services/api.ts';
 import type { ReporteProducto, ZonaCroquis } from '../types/alcohontrol.ts';
 import { formatCurrency } from '../utils/format.ts';
@@ -246,13 +247,7 @@ export function CroquisView({ searchQuery, onStockChanged }: CroquisViewProps) {
           </aside>
         </div>
       ) : error ? (
-        <div className="surface-card" style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'flex-start' }}>
-          <span className="badge badge-danger">Error</span>
-          <p style={{ margin: 0, color: 'var(--text-secondary)' }}>{error}</p>
-          <button type="button" className="btn" onClick={() => void cargarCroquis()}>
-            Reintentar
-          </button>
-        </div>
+        <ErrorCard title="Error" message={error} onRetry={() => void cargarCroquis()} />
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 68%) minmax(0, 32%)', gap: 20, flex: 1, minHeight: 0 }}>
           {/* Lienzo interactivo */}
@@ -493,8 +488,6 @@ export function CroquisView({ searchQuery, onStockChanged }: CroquisViewProps) {
                     {zonaActiva.productos.map((id) => {
                       const p = catalogoPorId.get(id);
                       if (!p) return null;
-                      const agotado = p.Existencias === 0;
-                      const bajo = p.Existencias > 0 && p.Existencias <= 30;
                       return (
                         <div
                           key={p.IdProducto}
@@ -517,14 +510,7 @@ export function CroquisView({ searchQuery, onStockChanged }: CroquisViewProps) {
                           </div>
 
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <span
-                              className={`badge num-tabular ${
-                                agotado ? 'badge-danger' : bajo ? 'badge-warn' : 'badge-ok'
-                              }`}
-                            >
-                              {agotado && <WarningCircle size={12} />}
-                              {p.Existencias}
-                            </span>
+                            <StockBadge existencias={p.Existencias} suffix="" showWarningIcon />
                             <button
                               type="button"
                               className="btn"

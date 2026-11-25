@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { PencilSimple, Plus, Trash, X } from '@phosphor-icons/react';
+import { PencilSimple, Plus, Trash } from '@phosphor-icons/react';
+import { ErrorCard } from './ui/ErrorCard.tsx';
+import { Modal } from './ui/Modal.tsx';
+import { StockBadge } from './ui/StockBadge.tsx';
 import { api } from '../services/api.ts';
 import type { Categoria, Producto, Proveedor, ReporteProducto } from '../types/alcohontrol.ts';
 import { formatCurrency } from '../utils/format.ts';
@@ -320,13 +323,7 @@ export function InventarioView({ searchQuery, onStockChanged }: InventarioViewPr
           ))}
         </section>
       ) : error ? (
-        <div className="surface-card" style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'flex-start' }}>
-          <span className="badge badge-danger">Error</span>
-          <p style={{ margin: 0, color: 'var(--text-secondary)' }}>{error}</p>
-          <button type="button" className="btn" onClick={() => void cargarTodo()}>
-            Reintentar
-          </button>
-        </div>
+        <ErrorCard title="Error" message={error} onRetry={() => void cargarTodo()} />
       ) : (
         <section className="surface-card" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
           {tab === 'productos' && (
@@ -388,13 +385,7 @@ export function InventarioView({ searchQuery, onStockChanged }: InventarioViewPr
                         <td style={{ color: 'var(--text-secondary)' }}>{p.Proveedor}</td>
                         <td className="num-tabular">{formatCurrency(p.Precio)}</td>
                         <td>
-                          <span
-                            className={`badge num-tabular ${
-                              p.Existencias === 0 ? 'badge-danger' : p.Existencias <= 30 ? 'badge-warn' : 'badge-ok'
-                            }`}
-                          >
-                            {p.Existencias} uds
-                          </span>
+                          <StockBadge existencias={p.Existencias} />
                         </td>
                         <td className="num-tabular">{formatCurrency(p.ValorTotalInventario)}</td>
                         <td style={{ textAlign: 'right' }}>
@@ -526,104 +517,78 @@ export function InventarioView({ searchQuery, onStockChanged }: InventarioViewPr
         </section>
       )}
 
-      {/* Modal Producto */}
-      {prodForm.open && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(7, 13, 26, 0.78)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 60,
-          }}
-        >
-          <form onSubmit={(e) => void guardarProducto(e)} className="surface-card" style={{ width: 440, display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h2 style={{ margin: 0, fontSize: 17 }}>{prodForm.id ? 'Editar Producto' : 'Nuevo Producto'}</h2>
-              <button type="button" className="btn-circle" style={{ width: 30, height: 30 }} onClick={() => setProdForm((p) => ({ ...p, open: false }))}>
-                <X size={14} />
-              </button>
-            </div>
+      <Modal
+        open={prodForm.open}
+        onClose={() => setProdForm((p) => ({ ...p, open: false }))}
+        title={prodForm.id ? 'Editar Producto' : 'Nuevo Producto'}
+        width={440}
+      >
+        <form onSubmit={(e) => void guardarProducto(e)} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <input
+            className="input"
+            placeholder="Nombre (máx. 30 caracteres)"
+            maxLength={30}
+            required
+            value={prodForm.Nombre}
+            onChange={(e) => setProdForm((p) => ({ ...p, Nombre: e.target.value }))}
+          />
+          <select
+            className="select"
+            value={prodForm.IdCategorias}
+            onChange={(e) => setProdForm((p) => ({ ...p, IdCategorias: Number(e.target.value) }))}
+          >
+            {categorias.map((c) => (
+              <option key={c.IdCategorias} value={c.IdCategorias}>
+                {c.Nombre}
+              </option>
+            ))}
+          </select>
+          <select
+            className="select"
+            value={prodForm.IdProveedor}
+            onChange={(e) => setProdForm((p) => ({ ...p, IdProveedor: Number(e.target.value) }))}
+          >
+            {proveedores.map((pr) => (
+              <option key={pr.IdProveedor} value={pr.IdProveedor}>
+                {pr.Nombre}
+              </option>
+            ))}
+          </select>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <input
-              className="input"
-              placeholder="Nombre (máx. 30 caracteres)"
-              maxLength={30}
+              type="number"
+              step="0.01"
+              min="0.01"
+              className="input num-tabular"
+              placeholder="Precio"
               required
-              value={prodForm.Nombre}
-              onChange={(e) => setProdForm((p) => ({ ...p, Nombre: e.target.value }))}
+              value={prodForm.Precio}
+              onChange={(e) => setProdForm((p) => ({ ...p, Precio: e.target.value }))}
             />
-            <select
-              className="select"
-              value={prodForm.IdCategorias}
-              onChange={(e) => setProdForm((p) => ({ ...p, IdCategorias: Number(e.target.value) }))}
-            >
-              {categorias.map((c) => (
-                <option key={c.IdCategorias} value={c.IdCategorias}>
-                  {c.Nombre}
-                </option>
-              ))}
-            </select>
-            <select
-              className="select"
-              value={prodForm.IdProveedor}
-              onChange={(e) => setProdForm((p) => ({ ...p, IdProveedor: Number(e.target.value) }))}
-            >
-              {proveedores.map((pr) => (
-                <option key={pr.IdProveedor} value={pr.IdProveedor}>
-                  {pr.Nombre}
-                </option>
-              ))}
-            </select>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              <input
-                type="number"
-                step="0.01"
-                min="0.01"
-                className="input num-tabular"
-                placeholder="Precio"
-                required
-                value={prodForm.Precio}
-                onChange={(e) => setProdForm((p) => ({ ...p, Precio: e.target.value }))}
-              />
-              <input
-                type="number"
-                min="0"
-                className="input num-tabular"
-                placeholder="Existencias"
-                required
-                value={prodForm.Existencias}
-                onChange={(e) => setProdForm((p) => ({ ...p, Existencias: e.target.value }))}
-              />
-            </div>
-            <button type="submit" className="btn btn-gold">
-              Guardar producto
-            </button>
-          </form>
-        </div>
-      )}
+            <input
+              type="number"
+              min="0"
+              className="input num-tabular"
+              placeholder="Existencias"
+              required
+              value={prodForm.Existencias}
+              onChange={(e) => setProdForm((p) => ({ ...p, Existencias: e.target.value }))}
+            />
+          </div>
+          <button type="submit" className="btn btn-gold">
+            Guardar producto
+          </button>
+        </form>
+      </Modal>
 
-      {/* Modal Ajuste de Stock */}
-      {ajusteTarget && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(7, 13, 26, 0.78)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 60,
-          }}
-        >
-          <form onSubmit={(e) => void aplicarAjuste(e)} className="surface-card" style={{ width: 380, display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h2 style={{ margin: 0, fontSize: 16 }}>Ajustar Stock · {ajusteTarget.nombre}</h2>
-              <button type="button" className="btn-circle" style={{ width: 30, height: 30 }} onClick={() => setAjusteTarget(null)}>
-                <X size={14} />
-              </button>
-            </div>
+      <Modal
+        open={Boolean(ajusteTarget)}
+        onClose={() => setAjusteTarget(null)}
+        title={ajusteTarget ? `Ajustar Stock · ${ajusteTarget.nombre}` : 'Ajustar Stock'}
+        width={380}
+      >
+        {ajusteTarget && (
+          <form onSubmit={(e) => void aplicarAjuste(e)} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
               Existencias actuales: <strong className="num-tabular">{ajusteTarget.actual} uds</strong>. Usa valores positivos para entrada o negativos para merma.
             </div>
@@ -638,87 +603,59 @@ export function InventarioView({ searchQuery, onStockChanged }: InventarioViewPr
               Aplicar ajuste
             </button>
           </form>
-        </div>
-      )}
+        )}
+      </Modal>
 
-      {/* Modal Categoría */}
-      {catForm.open && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(7, 13, 26, 0.78)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 60,
-          }}
-        >
-          <form onSubmit={(e) => void guardarCategoria(e)} className="surface-card" style={{ width: 380, display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h2 style={{ margin: 0, fontSize: 16 }}>{catForm.id ? 'Editar Categoría' : 'Nueva Categoría'}</h2>
-              <button type="button" className="btn-circle" style={{ width: 30, height: 30 }} onClick={() => setCatForm({ open: false, Nombre: '' })}>
-                <X size={14} />
-              </button>
-            </div>
-            <input
-              className="input"
-              placeholder="Nombre de categoría"
-              maxLength={50}
-              required
-              value={catForm.Nombre}
-              onChange={(e) => setCatForm((p) => ({ ...p, Nombre: e.target.value }))}
-            />
-            <button type="submit" className="btn btn-gold">
-              Guardar
-            </button>
-          </form>
-        </div>
-      )}
+      <Modal
+        open={catForm.open}
+        onClose={() => setCatForm({ open: false, Nombre: '' })}
+        title={catForm.id ? 'Editar Categoría' : 'Nueva Categoría'}
+        width={380}
+      >
+        <form onSubmit={(e) => void guardarCategoria(e)} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <input
+            className="input"
+            placeholder="Nombre de categoría"
+            maxLength={50}
+            required
+            value={catForm.Nombre}
+            onChange={(e) => setCatForm((p) => ({ ...p, Nombre: e.target.value }))}
+          />
+          <button type="submit" className="btn btn-gold">
+            Guardar
+          </button>
+        </form>
+      </Modal>
 
-      {/* Modal Proveedor */}
-      {provForm.open && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(7, 13, 26, 0.78)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 60,
-          }}
-        >
-          <form onSubmit={(e) => void guardarProveedor(e)} className="surface-card" style={{ width: 400, display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h2 style={{ margin: 0, fontSize: 16 }}>{provForm.id ? 'Editar Proveedor' : 'Nuevo Proveedor'}</h2>
-              <button type="button" className="btn-circle" style={{ width: 30, height: 30 }} onClick={() => setProvForm({ open: false, Nombre: '', Telefono: '' })}>
-                <X size={14} />
-              </button>
-            </div>
-            <input
-              className="input"
-              placeholder="Nombre del proveedor"
-              maxLength={30}
-              required
-              value={provForm.Nombre}
-              onChange={(e) => setProvForm((p) => ({ ...p, Nombre: e.target.value }))}
-            />
-            <input
-              className="input num-tabular"
-              placeholder="Teléfono (10 dígitos)"
-              pattern="\d{10}"
-              maxLength={10}
-              required
-              value={provForm.Telefono}
-              onChange={(e) => setProvForm((p) => ({ ...p, Telefono: e.target.value }))}
-            />
-            <button type="submit" className="btn btn-gold">
-              Guardar
-            </button>
-          </form>
-        </div>
-      )}
+      <Modal
+        open={provForm.open}
+        onClose={() => setProvForm({ open: false, Nombre: '', Telefono: '' })}
+        title={provForm.id ? 'Editar Proveedor' : 'Nuevo Proveedor'}
+        width={400}
+      >
+        <form onSubmit={(e) => void guardarProveedor(e)} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <input
+            className="input"
+            placeholder="Nombre del proveedor"
+            maxLength={30}
+            required
+            value={provForm.Nombre}
+            onChange={(e) => setProvForm((p) => ({ ...p, Nombre: e.target.value }))}
+          />
+          <input
+            className="input num-tabular"
+            placeholder="Teléfono (10 dígitos)"
+            pattern="\d{10}"
+            maxLength={10}
+            required
+            value={provForm.Telefono}
+            onChange={(e) => setProvForm((p) => ({ ...p, Telefono: e.target.value }))}
+          />
+          <button type="submit" className="btn btn-gold">
+            Guardar
+          </button>
+        </form>
+      </Modal>
     </div>
   );
 }

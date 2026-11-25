@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
-import { DownloadSimple, Eye, Printer, X } from '@phosphor-icons/react';
+import { DownloadSimple, Eye, Printer } from '@phosphor-icons/react';
+import { ErrorCard } from './ui/ErrorCard.tsx';
+import { Modal } from './ui/Modal.tsx';
 import { api } from '../services/api.ts';
 import type { CorteVentas, DetalleVentaItem, TipoCorte } from '../types/alcohontrol.ts';
 import { formatCurrency, formatDateShort, getTodayIso } from '../utils/format.ts';
@@ -120,10 +122,7 @@ export function CortesView() {
           </div>
         </div>
       ) : error ? (
-        <div className="surface-card" style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'flex-start' }}>
-          <span className="badge badge-danger">Error</span>
-          <p style={{ margin: 0, color: 'var(--text-secondary)' }}>{error}</p>
-        </div>
+        <ErrorCard title="Error" message={error} />
       ) : (
         corte && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20, flex: 1, minHeight: 0 }}>
@@ -246,50 +245,37 @@ export function CortesView() {
         )
       )}
 
-      {detalleModal && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(7, 13, 26, 0.78)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 60,
-          }}
-        >
-          <div className="surface-card" style={{ width: 520 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-              <h2 style={{ margin: 0, fontSize: 17 }}>Detalle Venta #{detalleModal.idVenta}</h2>
-              <button type="button" className="btn-circle" style={{ width: 30, height: 30 }} onClick={() => setDetalleModal(null)}>
-                <X size={14} />
-              </button>
-            </div>
-            <table className="clean-table">
-              <thead>
-                <tr>
-                  <th>Producto</th>
-                  <th>Cant.</th>
-                  <th>Precio</th>
-                  <th style={{ textAlign: 'right' }}>Subtotal</th>
+      <Modal
+        open={Boolean(detalleModal)}
+        onClose={() => setDetalleModal(null)}
+        title={detalleModal ? `Detalle Venta #${detalleModal.idVenta}` : 'Detalle Venta'}
+        width={520}
+      >
+        {detalleModal && (
+          <table className="clean-table">
+            <thead>
+              <tr>
+                <th>Producto</th>
+                <th>Cant.</th>
+                <th>Precio</th>
+                <th style={{ textAlign: 'right' }}>Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              {detalleModal.items.map((item) => (
+                <tr key={item.IdDetalle}>
+                  <td style={{ fontWeight: 500 }}>{item.Producto}</td>
+                  <td className="num-tabular">{item.Cantidad}</td>
+                  <td className="num-tabular">{formatCurrency(item.PrecioUnitario)}</td>
+                  <td className="num-tabular" style={{ textAlign: 'right', fontWeight: 600 }}>
+                    {formatCurrency(item.Subtotal)}
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {detalleModal.items.map((item) => (
-                  <tr key={item.IdDetalle}>
-                    <td style={{ fontWeight: 500 }}>{item.Producto}</td>
-                    <td className="num-tabular">{item.Cantidad}</td>
-                    <td className="num-tabular">{formatCurrency(item.PrecioUnitario)}</td>
-                    <td className="num-tabular" style={{ textAlign: 'right', fontWeight: 600 }}>
-                      {formatCurrency(item.Subtotal)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+              ))}
+            </tbody>
+          </table>
+        )}
+      </Modal>
     </div>
   );
 }

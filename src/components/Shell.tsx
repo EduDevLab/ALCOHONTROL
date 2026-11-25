@@ -13,6 +13,7 @@ import {
   type Icon,
 } from '@phosphor-icons/react';
 import { CategoryIcon } from './CategoryIcon.tsx';
+import { StockBadge } from './ui/StockBadge.tsx';
 import { esAdministrador, type Empleado, type ProductoStockBajo, type VistaId } from '../types/alcohontrol.ts';
 
 interface NavItem {
@@ -232,13 +233,7 @@ export function Shell({
                                 <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{item.Categoria}</div>
                               </div>
                             </div>
-                            <span
-                              className={`badge num-tabular ${
-                                item.Existencias === 0 ? 'badge-danger' : 'badge-warn'
-                              }`}
-                            >
-                              {item.Existencias} uds
-                            </span>
+                            <StockBadge existencias={item.Existencias} />
                           </div>
                         ))}
                         <div style={{ padding: 10 }}>

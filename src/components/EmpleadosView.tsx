@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import { PencilSimple, Plus, Trash, X } from '@phosphor-icons/react';
+import { PencilSimple, Plus, Trash } from '@phosphor-icons/react';
+import { ErrorCard } from './ui/ErrorCard.tsx';
+import { Modal } from './ui/Modal.tsx';
 import { api } from '../services/api.ts';
 import type { Empleado } from '../types/alcohontrol.ts';
 
@@ -113,9 +115,7 @@ export function EmpleadosView() {
           ))}
         </section>
       ) : error ? (
-        <div className="surface-card" style={{ color: 'var(--status-danger)' }}>
-          {error}
-        </div>
+        <ErrorCard title="Error" message={error} onRetry={() => void cargar()} />
       ) : (
         <section className="surface-card">
           <table className="clean-table">
@@ -172,56 +172,43 @@ export function EmpleadosView() {
         </section>
       )}
 
-      {form.open && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(7, 13, 26, 0.78)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 60,
-          }}
-        >
-          <form onSubmit={(e) => void guardar(e)} className="surface-card" style={{ width: 420, display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h2 style={{ margin: 0, fontSize: 16 }}>{form.id ? 'Editar Empleado' : 'Nuevo Empleado'}</h2>
-              <button type="button" className="btn-circle" style={{ width: 30, height: 30 }} onClick={() => setForm((p) => ({ ...p, open: false }))}>
-                <X size={14} />
-              </button>
-            </div>
-            <input
-              className="input"
-              placeholder="Nombre completo"
-              maxLength={100}
-              required
-              value={form.Nombre}
-              onChange={(e) => setForm((p) => ({ ...p, Nombre: e.target.value }))}
-            />
-            <select
-              className="select"
-              value={form.Puesto}
-              onChange={(e) => setForm((p) => ({ ...p, Puesto: e.target.value }))}
-            >
-              <option value="Cajero">Cajero</option>
-              <option value="Administrador">Administrador</option>
-            </select>
-            <input
-              className="input num-tabular"
-              placeholder="Teléfono (10 dígitos)"
-              pattern="\d{10}"
-              maxLength={10}
-              required
-              value={form.Telefono}
-              onChange={(e) => setForm((p) => ({ ...p, Telefono: e.target.value }))}
-            />
-            <button type="submit" className="btn btn-gold">
-              Guardar empleado
-            </button>
-          </form>
-        </div>
-      )}
+      <Modal
+        open={form.open}
+        onClose={() => setForm((p) => ({ ...p, open: false }))}
+        title={form.id ? 'Editar Empleado' : 'Nuevo Empleado'}
+        width={420}
+      >
+        <form onSubmit={(e) => void guardar(e)} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <input
+            className="input"
+            placeholder="Nombre completo"
+            maxLength={100}
+            required
+            value={form.Nombre}
+            onChange={(e) => setForm((p) => ({ ...p, Nombre: e.target.value }))}
+          />
+          <select
+            className="select"
+            value={form.Puesto}
+            onChange={(e) => setForm((p) => ({ ...p, Puesto: e.target.value }))}
+          >
+            <option value="Cajero">Cajero</option>
+            <option value="Administrador">Administrador</option>
+          </select>
+          <input
+            className="input num-tabular"
+            placeholder="Teléfono (10 dígitos)"
+            pattern="\d{10}"
+            maxLength={10}
+            required
+            value={form.Telefono}
+            onChange={(e) => setForm((p) => ({ ...p, Telefono: e.target.value }))}
+          />
+          <button type="submit" className="btn btn-gold">
+            Guardar empleado
+          </button>
+        </form>
+      </Modal>
     </div>
   );
 }

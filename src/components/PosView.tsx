@@ -11,9 +11,11 @@ import {
   ShoppingCart,
   Trash,
   WarningCircle,
-  X,
 } from '@phosphor-icons/react';
 import { CategoryIcon } from './CategoryIcon.tsx';
+import { PosProductCard } from './pos/PosProductCard.tsx';
+import { PosTicketModal, type MetodoPago, type PosCartItem } from './pos/PosTicketModal.tsx';
+import { ErrorCard } from './ui/ErrorCard.tsx';
 import { api } from '../services/api.ts';
 import type { Empleado, ReporteProducto } from '../types/alcohontrol.ts';
 import { formatCurrency, formatDateShort, getTodayIso } from '../utils/format.ts';
@@ -24,16 +26,7 @@ interface PosViewProps {
   onVentaCompletada: () => void;
 }
 
-interface CartItem {
-  IdProducto: number;
-  Nombre: string;
-  Precio: number;
-  ExistenciasMax: number;
-  Cantidad: number;
-}
-
 type CategoriaFiltro = 'Todas' | 'Cervezas' | 'Sabritas' | 'Cigarros';
-type MetodoPago = 'Efectivo' | 'Tarjeta' | 'Ambos';
 
 const CATEGORIAS_SWITCH: CategoriaFiltro[] = ['Todas', 'Cervezas', 'Sabritas', 'Cigarros'];
 const METODOS_PAGO: Array<{ id: MetodoPago; label: string; icon: typeof Money }> = [
@@ -41,13 +34,12 @@ const METODOS_PAGO: Array<{ id: MetodoPago; label: string; icon: typeof Money }>
   { id: 'Tarjeta', label: 'Tarjeta', icon: CreditCard },
   { id: 'Ambos', label: 'Ambos', icon: ArrowsLeftRight },
 ];
-const PACK_SIZES = [6, 12, 24] as const;
 const EASE_OUT = [0.23, 1, 0.32, 1] as const;
 
 export function PosView({ empleado, searchQuery, onVentaCompletada }: PosViewProps) {
   const [productos, setProductos] = useState<ReporteProducto[]>([]);
   const [categoriaActiva, setCategoriaActiva] = useState<CategoriaFiltro>('Todas');
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const [cart, setCart] = useState<PosCartItem[]>([]);
   const [metodoPago, setMetodoPago] = useState<MetodoPago>('Efectivo');
   const [montoEfectivo, setMontoEfectivo] = useState<string>('');
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
@@ -128,7 +120,6 @@ export function PosView({ empleado, searchQuery, onVentaCompletada }: PosViewPro
             : i,
         );
       }
-      const cantidadInicial = Math.min(prod.Existencias, delta);
       return [
         ...prev,
         {
@@ -136,7 +127,7 @@ export function PosView({ empleado, searchQuery, onVentaCompletada }: PosViewPro
           Nombre: prod.Producto,
           Precio: Number(prod.Precio),
           ExistenciasMax: prod.Existencias,
-          Cantidad: cantidadInicial,
+          Cantidad: Math.min(prod.Existencias, delta),
         },
       ];
     });
@@ -152,7 +143,7 @@ export function PosView({ empleado, searchQuery, onVentaCompletada }: PosViewPro
           if (next > item.ExistenciasMax) return item;
           return { ...item, Cantidad: next };
         })
-        .filter((i): i is CartItem => i !== null),
+        .filter((i): i is PosCartItem => i !== null),
     );
   };
 
@@ -204,7 +195,6 @@ export function PosView({ empleado, searchQuery, onVentaCompletada }: PosViewPro
           <span className="badge badge-neutral">Caja: {empleado.Nombre}</span>
         </div>
 
-        {/* Switch compacto de 4 categorías */}
         <div
           style={{
             display: 'inline-flex',
@@ -271,7 +261,7 @@ export function PosView({ empleado, searchQuery, onVentaCompletada }: PosViewPro
 
       {loading ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 62%) minmax(0, 38%)', gap: 20, flex: 1, minHeight: 0 }}>
-          <section className="surface-card" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(215px, 1fr))', gap: 14, alignContent: 'start' }}>
+          <section className="surface-card pos-products-grid">
             {[0, 1, 2, 3, 4, 5].map((idx) => (
               <div key={idx} className="skeleton" style={{ width: '100%', height: 148 }} />
             ))}
@@ -282,16 +272,9 @@ export function PosView({ empleado, searchQuery, onVentaCompletada }: PosViewPro
           </aside>
         </div>
       ) : error ? (
-        <div className="surface-card" style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'flex-start' }}>
-          <span className="badge badge-danger">Error al cargar</span>
-          <p style={{ margin: 0, color: 'var(--text-secondary)' }}>{error}</p>
-          <button type="button" className="btn" onClick={() => void cargarCatalogo()}>
-            Reintentar
-          </button>
-        </div>
+        <ErrorCard message={error} onRetry={() => void cargarCatalogo()} />
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 62%) minmax(0, 38%)', gap: 20, flex: 1, minHeight: 0 }}>
-          {/* Izquierda: Grid de Cards uniformes */}
           <section className="surface-card" style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
             <div className="scroll-area" style={{ flex: 1, paddingRight: 4 }}>
               <AnimatePresence mode="wait">
@@ -315,150 +298,21 @@ export function PosView({ empleado, searchQuery, onVentaCompletada }: PosViewPro
                     exit={{ opacity: 0, y: -8 }}
                     transition={{ duration: 0.2, ease: EASE_OUT }}
                   >
-                    {productosFiltrados.map((p) => {
-                      const agotado = p.Existencias <= 0;
-                      const stockBajo = p.Existencias > 0 && p.Existencias <= 30;
-                      const enCarrito = cart.find((i) => i.IdProducto === p.IdProducto)?.Cantidad ?? 0;
-                      const lleno = enCarrito >= p.Existencias;
-                      const esCerveza = /cerveza/i.test(p.Categoria);
-
-                      return (
-                        <div
-                          key={p.IdProducto}
-                          role="button"
-                          tabIndex={agotado ? -1 : 0}
-                          aria-disabled={agotado || lleno}
-                          className={`pos-product-card ${agotado ? 'is-disabled' : ''} ${
-                            enCarrito > 0 ? 'in-cart' : ''
-                          }`}
-                          onClick={() => {
-                            if (!agotado && !lleno) agregarCantidad(p, 1);
-                          }}
-                          onContextMenu={(e) => {
-                            e.preventDefault();
-                            if (enCarrito > 0) {
-                              cambiarCantidad(p.IdProducto, -1);
-                            }
-                          }}
-                          onKeyDown={(e) => {
-                            if (!agotado && !lleno && (e.key === 'Enter' || e.key === ' ')) {
-                              e.preventDefault();
-                              agregarCantidad(p, 1);
-                            }
-                          }}
-                        >
-                          {/* Fila superior: Categoría + Stock */}
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                            <span
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: 6,
-                                fontSize: 11,
-                                color: 'var(--text-secondary)',
-                              }}
-                            >
-                              <span style={{ color: 'var(--accent-gold)', display: 'inline-flex' }}>
-                                <CategoryIcon categoria={p.Categoria} size={15} />
-                              </span>
-                              {p.Categoria}
-                            </span>
-
-                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                              {enCarrito > 0 && (
-                                <span
-                                  className="badge num-tabular"
-                                  style={{
-                                    background: 'var(--accent-gold)',
-                                    color: 'var(--accent-gold-text)',
-                                    fontWeight: 700,
-                                    padding: '2px 7px',
-                                  }}
-                                >
-                                  x{enCarrito}
-                                </span>
-                              )}
-                              <span
-                                className={`badge num-tabular ${
-                                  agotado ? 'badge-danger' : stockBajo ? 'badge-warn' : 'badge-ok'
-                                }`}
-                              >
-                                {p.Existencias}
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* Centro: Nombre y proveedor */}
-                          <div style={{ minWidth: 0 }}>
-                            <div
-                              style={{
-                                fontSize: 14,
-                                fontWeight: 600,
-                                color: 'var(--text-primary)',
-                                whiteSpace: 'nowrap',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                              }}
-                            >
-                              {p.Producto}
-                            </div>
-                            <div
-                              style={{
-                                fontSize: 11,
-                                color: 'var(--text-muted)',
-                                whiteSpace: 'nowrap',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                              }}
-                            >
-                              {p.Proveedor}
-                            </div>
-                          </div>
-
-                          {/* Fila inferior fija (28px): Precio + Botones +6/+12/+24 en hover para Cervezas */}
-                          <div
-                            style={{
-                              height: 28,
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                              gap: 8,
-                            }}
-                          >
-                            <span className="hero-metric" style={{ fontSize: 17, fontWeight: 600 }}>
-                              {formatCurrency(p.Precio)}
-                            </span>
-
-                            {esCerveza && !agotado && (
-                              <div className="pos-pack-actions">
-                                {PACK_SIZES.map((pack) => (
-                                  <button
-                                    key={pack}
-                                    type="button"
-                                    className="pos-pack-btn num-tabular"
-                                    disabled={p.Existencias - enCarrito < pack}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      agregarCantidad(p, pack);
-                                    }}
-                                    title={`Agregar ${pack} unidades`}
-                                  >
-                                    +{pack}
-                                  </button>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
+                    {productosFiltrados.map((p) => (
+                      <PosProductCard
+                        key={p.IdProducto}
+                        producto={p}
+                        enCarrito={cart.find((i) => i.IdProducto === p.IdProducto)?.Cantidad ?? 0}
+                        onAdd={agregarCantidad}
+                        onSubtractOne={(id) => cambiarCantidad(id, -1)}
+                      />
+                    ))}
                   </motion.div>
                 )}
               </AnimatePresence>
             </div>
           </section>
 
-          {/* Derecha: Ticket activo */}
           <aside className="surface-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 14, minHeight: 0 }}>
             <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexShrink: 0 }}>
@@ -606,7 +460,6 @@ export function PosView({ empleado, searchQuery, onVentaCompletada }: PosViewPro
               )}
             </div>
 
-            {/* Método de pago + Total + Cobrar */}
             <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 14, flexShrink: 0 }}>
               <div style={{ marginBottom: 12 }}>
                 <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6 }}>Método de pago</div>
@@ -746,144 +599,22 @@ export function PosView({ empleado, searchQuery, onVentaCompletada }: PosViewPro
         </div>
       )}
 
-      {/* Modal de Confirmación de Ticket */}
-      <AnimatePresence>
-        {confirmModalOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.16, ease: EASE_OUT }}
-            onClick={() => !submitting && setConfirmModalOpen(false)}
-            style={{
-              position: 'fixed',
-              inset: 0,
-              background: 'rgba(5, 6, 8, 0.72)',
-              backdropFilter: 'blur(6px)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: 20,
-              zIndex: 70,
-            }}
-          >
-            <motion.div
-              role="dialog"
-              aria-modal="true"
-              aria-label="Confirmación de ticket de venta"
-              initial={{ opacity: 0, scale: 0.96, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.96, y: 10 }}
-              transition={{ duration: 0.2, ease: EASE_OUT }}
-              onClick={(e) => e.stopPropagation()}
-              className="surface-card"
-              style={{ width: '100%', maxWidth: 420, display: 'flex', flexDirection: 'column', gap: 16 }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div>
-                  <div
-                    style={{
-                      fontSize: 11,
-                      fontWeight: 700,
-                      letterSpacing: '0.08em',
-                      color: 'var(--accent-gold)',
-                      textTransform: 'uppercase',
-                    }}
-                  >
-                    Alcohontrol · Expendio Pacífico
-                  </div>
-                  <h2 style={{ margin: '4px 0 2px', fontSize: 18, fontWeight: 600 }}>Resumen de Ticket</h2>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                    Tamazula, Guasave · {fechaHoy}
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  className="btn-circle"
-                  style={{ width: 32, height: 32 }}
-                  disabled={submitting}
-                  onClick={() => setConfirmModalOpen(false)}
-                  aria-label="Cerrar"
-                >
-                  <X size={14} />
-                </button>
-              </div>
-
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  fontSize: 12,
-                  color: 'var(--text-secondary)',
-                  padding: '8px 12px',
-                  borderRadius: 'var(--radius-xl)',
-                  background: 'var(--bg-elevated)',
-                  border: '1px solid var(--border-subtle)',
-                }}
-              >
-                <span>Cajero: {empleado.Nombre}</span>
-                <span className="badge badge-neutral">
-                  {metodoPago === 'Ambos'
-                    ? `Efectivo ${formatCurrency(efectivoMixto)} + Tarjeta ${formatCurrency(tarjetaMixta)}`
-                    : `Pago: ${metodoPago}`}
-                </span>
-              </div>
-
-              <div style={{ borderTop: '1px dashed var(--border-subtle)', borderBottom: '1px dashed var(--border-subtle)', padding: '12px 0', maxHeight: 240, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {cart.map((item) => (
-                  <div
-                    key={item.IdProducto}
-                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12, fontSize: 13 }}
-                  >
-                    <div style={{ minWidth: 0 }}>
-                      <span className="num-tabular" style={{ color: 'var(--accent-gold)', fontWeight: 600, marginRight: 6 }}>
-                        {item.Cantidad}x
-                      </span>
-                      <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{item.Nombre}</span>
-                      <span className="num-tabular" style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 6 }}>
-                        ({formatCurrency(item.Precio)})
-                      </span>
-                    </div>
-                    <span className="num-tabular" style={{ fontWeight: 600, flexShrink: 0 }}>
-                      {formatCurrency(item.Cantidad * item.Precio)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                <div>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{totalPiezas} artículos</div>
-                  <div style={{ fontSize: 14, fontWeight: 500 }}>Total del ticket</div>
-                </div>
-                <div className="hero-metric" style={{ fontSize: 28, fontWeight: 600, color: 'var(--accent-gold)' }}>
-                  {formatCurrency(totalTicket)}
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: 10 }}>
-                <button
-                  type="button"
-                  className="btn"
-                  disabled={submitting}
-                  onClick={() => setConfirmModalOpen(false)}
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-gold"
-                  disabled={submitting}
-                  onClick={() => void handleConfirmarVenta()}
-                >
-                  {submitting ? 'Registrando…' : 'Confirmar Ticket'}
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <PosTicketModal
+        open={confirmModalOpen}
+        onClose={() => {
+          if (!submitting) setConfirmModalOpen(false);
+        }}
+        onConfirm={() => void handleConfirmarVenta()}
+        submitting={submitting}
+        cajeroNombre={empleado.Nombre}
+        fechaHoy={fechaHoy}
+        metodoPago={metodoPago}
+        efectivoMixto={efectivoMixto}
+        tarjetaMixta={tarjetaMixta}
+        items={cart}
+        totalPiezas={totalPiezas}
+        totalTicket={totalTicket}
+      />
     </div>
   );
 }
