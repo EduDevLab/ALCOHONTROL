@@ -1,0 +1,50 @@
+{
+  "actualizadoEn": "2026-11-24T23:35:00.875Z",
+  "zonas": [
+    {
+      "id": "bodega",
+      "nombre": "Bodega",
+      "x": 40,
+      "y": 40,
+      "width": 320,
+      "height": 220,
+      "productos": []
+    },
+    {
+      "id": "refrigeradores",
+      "nombre": "Refrigeradores",
+      "x": 400,
+      "y": 40,
+      "width": 360,
+      "height": 220,
+      "productos": []
+    },
+    {
+      "id": "anaquel",
+      "nombre": "Anaquel",
+      "x": 800,
+      "y": 40,
+      "width": 260,
+      "height": 220,
+      "productos": []
+    },
+    {
+      "id": "mostrador",
+      "nombre": "Mostrador",
+      "x": 40,
+      "y": 310,
+      "width": 500,
+      "height": 180,
+      "productos": []
+    },
+    {
+      "id": "botanas",
+      "nombre": "Botanas",
+      "x": 580,
+      "y": 310,
+      "width": 480,
+      "height": 180,
+      "productos": []
+    }
+  ]
+}
