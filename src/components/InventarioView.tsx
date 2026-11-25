@@ -313,9 +313,12 @@ export function InventarioView({ searchQuery, onStockChanged }: InventarioViewPr
       )}
 
       {loading ? (
-        <div className="surface-card" style={{ padding: 48, textAlign: 'center', color: 'var(--text-secondary)' }}>
-          Cargando inventario…
-        </div>
+        <section className="surface-card" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div className="skeleton" style={{ width: '40%', height: 30, borderRadius: 999 }} />
+          {[0, 1, 2, 3, 4, 5].map((idx) => (
+            <div key={idx} className="skeleton" style={{ width: '100%', height: 42 }} />
+          ))}
+        </section>
       ) : error ? (
         <div className="surface-card" style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'flex-start' }}>
           <span className="badge badge-danger">Error</span>

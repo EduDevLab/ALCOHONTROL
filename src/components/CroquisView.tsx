@@ -233,8 +233,17 @@ export function CroquisView({ searchQuery, onStockChanged }: CroquisViewProps) {
       )}
 
       {loading ? (
-        <div className="surface-card" style={{ padding: 48, textAlign: 'center', color: 'var(--text-secondary)' }}>
-          Cargando mapa del expendio…
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 68%) minmax(0, 32%)', gap: 20, flex: 1, minHeight: 0 }}>
+          <section className="surface-card" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div className="skeleton" style={{ width: '50%', height: 20 }} />
+            <div className="skeleton" style={{ width: '100%', flex: 1, minHeight: 340 }} />
+          </section>
+          <aside className="surface-card" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div className="skeleton" style={{ width: '60%', height: 24 }} />
+            {[0, 1, 2, 3].map((idx) => (
+              <div key={idx} className="skeleton" style={{ width: '100%', height: 46 }} />
+            ))}
+          </aside>
         </div>
       ) : error ? (
         <div className="surface-card" style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'flex-start' }}>

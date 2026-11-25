@@ -231,14 +231,6 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
   // Geometría SVG para Gauge semicircular (pathLength = 100 para barrido directo)
   const gaugeDashOffset = 100 - Math.min(100, Math.max(0, stockCounts.pct));
 
-  if (loading) {
-    return (
-      <div className="surface-card" style={{ padding: 48, textAlign: 'center', color: 'var(--text-secondary)' }}>
-        Cargando métricas operativas de Alcohontrol…
-      </div>
-    );
-  }
-
   if (error) {
     return (
       <div className="surface-card" style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'flex-start' }}>
@@ -358,10 +350,14 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
               style={{ position: 'relative', width: '100%' }}
               onMouseLeave={() => setActiveIndex(null)}
             >
-              <svg
-                viewBox={`0 0 ${svgW} ${svgH}`}
-                style={{ width: '100%', height: 'auto', display: 'block' }}
-              >
+              {loading ? (
+                <div className="skeleton" style={{ width: '100%', height: 190 }} />
+              ) : (
+                <>
+                  <svg
+                    viewBox={`0 0 ${svgW} ${svgH}`}
+                    style={{ width: '100%', height: 'auto', display: 'block' }}
+                  >
                 <defs>
                   <linearGradient id="goldAreaGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#e5a93b" stopOpacity="0.24" />
@@ -503,6 +499,8 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
                   </motion.div>
                 )}
               </AnimatePresence>
+                </>
+              )}
             </div>
           </motion.section>
 
@@ -527,7 +525,13 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
                 </button>
               </div>
 
-              {filteredVentas.length === 0 ? (
+              {loading ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {[0, 1, 2, 3].map((idx) => (
+                    <div key={idx} className="skeleton" style={{ width: '100%', height: 36 }} />
+                  ))}
+                </div>
+              ) : filteredVentas.length === 0 ? (
                 <div style={{ padding: '24px 0', color: 'var(--text-muted)', fontSize: 13 }}>
                   No hay ventas registradas para mostrar.
                 </div>
@@ -575,102 +579,120 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.38, delay: 0.14, ease: EASE_OUT }}
             >
-              <div>
-                <h2 style={{ margin: '0 0 12px', fontSize: 16, fontWeight: 600 }}>Valor de Inventario</h2>
+              {loading ? (
+                <>
+                  <div>
+                    <h2 style={{ margin: '0 0 12px', fontSize: 16, fontWeight: 600 }}>Valor de Inventario</h2>
+                    <div className="skeleton" style={{ width: '65%', height: 34 }} />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <div className="skeleton" style={{ width: '100%', height: 10, borderRadius: 999 }} />
+                    {[0, 1, 2].map((idx) => (
+                      <div key={idx} className="skeleton" style={{ width: '100%', height: 18 }} />
+                    ))}
+                  </div>
+                  <div className="skeleton" style={{ width: '55%', height: 18 }} />
+                </>
+              ) : (
+                <>
+                  <div>
+                    <h2 style={{ margin: '0 0 12px', fontSize: 16, fontWeight: 600 }}>Valor de Inventario</h2>
 
-                <div className="hero-metric" style={{ fontSize: 30, fontWeight: 600 }}>
-                  {formatCurrency(valorTotalInventario)}
-                </div>
-              </div>
+                    <div className="hero-metric" style={{ fontSize: 30, fontWeight: 600 }}>
+                      {formatCurrency(valorTotalInventario)}
+                    </div>
+                  </div>
 
-              {/* Barra apilada animada + Desglose por Categoría */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <div
-                  style={{
-                    height: 10,
-                    borderRadius: 999,
-                    background: 'var(--bg-elevated)',
-                    overflow: 'hidden',
-                    display: 'flex',
-                    gap: 3,
-                    padding: 2,
-                  }}
-                  aria-label="Distribución de inventario por categoría"
-                >
-                  {distribucionCategorias.map((cat, idx) => (
+                  {/* Barra apilada animada + Desglose por Categoría */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     <div
-                      key={cat.nombre}
-                      className="bar-segment-enter"
                       style={{
-                        width: `${Math.max(4, cat.pct)}%`,
-                        height: '100%',
+                        height: 10,
                         borderRadius: 999,
-                        background: cat.color,
-                        animationDelay: `${160 + idx * 70}ms`,
-                      }}
-                      title={`${cat.nombre}: ${formatCurrency(cat.valor)} (${cat.pct}%)`}
-                    />
-                  ))}
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {distribucionCategorias.map((cat) => (
-                    <div
-                      key={cat.nombre}
-                      style={{
+                        background: 'var(--bg-elevated)',
+                        overflow: 'hidden',
                         display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        fontSize: 12,
+                        gap: 3,
+                        padding: 2,
                       }}
+                      aria-label="Distribución de inventario por categoría"
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                        <span
+                      {distribucionCategorias.map((cat, idx) => (
+                        <div
+                          key={cat.nombre}
+                          className="bar-segment-enter"
                           style={{
-                            width: 7,
-                            height: 7,
+                            width: `${Math.max(4, cat.pct)}%`,
+                            height: '100%',
                             borderRadius: 999,
                             background: cat.color,
-                            flexShrink: 0,
+                            animationDelay: `${160 + idx * 70}ms`,
                           }}
+                          title={`${cat.nombre}: ${formatCurrency(cat.valor)} (${cat.pct}%)`}
                         />
-                        <span style={{ color: cat.color, display: 'inline-flex', alignItems: 'center' }}>
-                          <CategoryIcon categoria={cat.nombre} size={14} />
-                        </span>
-                        <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{cat.nombre}</span>
-                      </div>
-
-                      <div className="num-tabular" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <span style={{ color: 'var(--text-muted)' }}>{cat.pct}%</span>
-                        <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
-                          {formatCurrency(cat.valor)}
-                        </span>
-                      </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, paddingTop: 6, borderTop: '1px solid var(--border-subtle)' }}>
-                <span
-                  style={{
-                    width: 22,
-                    height: 22,
-                    borderRadius: '999px',
-                    background: 'var(--accent-gold-soft)',
-                    color: 'var(--accent-gold)',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <TrendUp size={13} weight="bold" />
-                </span>
-                <span className="num-tabular" style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                  {productos.length} productos
-                </span>
-                <span style={{ color: 'var(--text-muted)' }}>· {stockBajo.length} en alerta</span>
-              </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {distribucionCategorias.map((cat) => (
+                        <div
+                          key={cat.nombre}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            fontSize: 12,
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                            <span
+                              style={{
+                                width: 7,
+                                height: 7,
+                                borderRadius: 999,
+                                background: cat.color,
+                                flexShrink: 0,
+                              }}
+                            />
+                            <span style={{ color: cat.color, display: 'inline-flex', alignItems: 'center' }}>
+                              <CategoryIcon categoria={cat.nombre} size={14} />
+                            </span>
+                            <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{cat.nombre}</span>
+                          </div>
+
+                          <div className="num-tabular" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <span style={{ color: 'var(--text-muted)' }}>{cat.pct}%</span>
+                            <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
+                              {formatCurrency(cat.valor)}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, paddingTop: 6, borderTop: '1px solid var(--border-subtle)' }}>
+                    <span
+                      style={{
+                        width: 22,
+                        height: 22,
+                        borderRadius: '999px',
+                        background: 'var(--accent-gold-soft)',
+                        color: 'var(--accent-gold)',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <TrendUp size={13} weight="bold" />
+                    </span>
+                    <span className="num-tabular" style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                      {productos.length} productos
+                    </span>
+                    <span style={{ color: 'var(--text-muted)' }}>· {stockBajo.length} en alerta</span>
+                  </div>
+                </>
+              )}
             </motion.section>
           </div>
         </div>
@@ -698,67 +720,77 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
               </button>
             </div>
 
-            <div
-              style={{
-                background:
-                  'radial-gradient(circle at 50% 72%, rgba(229, 169, 59, 0.12) 0%, rgba(23, 26, 34, 0.4) 55%, rgba(8, 9, 12, 0.65) 100%)',
-                border: '1px solid var(--border-subtle)',
-                borderRadius: 'var(--radius-xl)',
-                padding: '18px 16px 14px',
-                textAlign: 'center',
-              }}
-            >
-              <div className="hero-metric" style={{ fontSize: 30, fontWeight: 600 }}>
-                {stockCounts.pct.toFixed(1)}%
-              </div>
-              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>
-                Productos con stock &gt; 30 uds
-              </div>
-
-              <svg
-                viewBox="0 0 220 130"
-                style={{ width: '100%', maxWidth: 215, display: 'block', margin: '0 auto', overflow: 'visible' }}
+            {loading ? (
+              <div className="skeleton" style={{ width: '100%', height: 185 }} />
+            ) : (
+              <div
+                style={{
+                  background:
+                    'radial-gradient(circle at 50% 72%, rgba(229, 169, 59, 0.12) 0%, rgba(23, 26, 34, 0.4) 55%, rgba(8, 9, 12, 0.65) 100%)',
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: 'var(--radius-xl)',
+                  padding: '18px 16px 14px',
+                  textAlign: 'center',
+                }}
               >
-                <defs>
-                  <linearGradient id="gaugeGoldGrad" x1="0" y1="0" x2="1" y2="0">
-                    <stop offset="0%" stopColor="#e5a93b" />
-                    <stop offset="100%" stopColor="#f0b94e" />
-                  </linearGradient>
-                </defs>
+                <div className="hero-metric" style={{ fontSize: 30, fontWeight: 600 }}>
+                  {stockCounts.pct.toFixed(1)}%
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>
+                  Productos con stock &gt; 30 uds
+                </div>
 
-                <path
-                  d="M 18 112 A 92 92 0 0 1 202 112"
-                  fill="none"
-                  stroke="var(--bg-elevated)"
-                  strokeWidth="20"
-                  strokeLinecap="round"
-                  pathLength={100}
-                />
+                <svg
+                  viewBox="0 0 220 130"
+                  style={{ width: '100%', maxWidth: 215, display: 'block', margin: '0 auto', overflow: 'visible' }}
+                >
+                  <defs>
+                    <linearGradient id="gaugeGoldGrad" x1="0" y1="0" x2="1" y2="0">
+                      <stop offset="0%" stopColor="#e5a93b" />
+                      <stop offset="100%" stopColor="#f0b94e" />
+                    </linearGradient>
+                  </defs>
 
-                <path
-                  d="M 18 112 A 92 92 0 0 1 202 112"
-                  fill="none"
-                  stroke="url(#gaugeGoldGrad)"
-                  strokeWidth="20"
-                  strokeLinecap="round"
-                  pathLength={100}
-                  strokeDasharray={100}
-                  strokeDashoffset={gaugeDashOffset}
-                  className="gauge-arc-sweep"
-                  style={{ filter: 'drop-shadow(0 0 8px rgba(229, 169, 59, 0.28))' }}
-                />
-              </svg>
-            </div>
+                  <path
+                    d="M 18 112 A 92 92 0 0 1 202 112"
+                    fill="none"
+                    stroke="var(--bg-elevated)"
+                    strokeWidth="20"
+                    strokeLinecap="round"
+                    pathLength={100}
+                  />
+
+                  <path
+                    d="M 18 112 A 92 92 0 0 1 202 112"
+                    fill="none"
+                    stroke="url(#gaugeGoldGrad)"
+                    strokeWidth="20"
+                    strokeLinecap="round"
+                    pathLength={100}
+                    strokeDasharray={100}
+                    strokeDashoffset={gaugeDashOffset}
+                    className="gauge-arc-sweep"
+                    style={{ filter: 'drop-shadow(0 0 8px rgba(229, 169, 59, 0.28))' }}
+                  />
+                </svg>
+              </div>
+            )}
           </div>
 
           {/* Mitad Inferior: Feed Cronológico de Alertas con ícono por categoría */}
           <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexShrink: 0 }}>
               <span style={{ fontSize: 15, fontWeight: 500 }}>Alertas de Stock</span>
-              <span className="badge badge-warn num-tabular">{stockBajo.length}</span>
+              <span className="badge badge-warn num-tabular">{loading ? '—' : stockBajo.length}</span>
             </div>
 
-            {filteredStockBajo.length === 0 ? (
+            {loading ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {[0, 1, 2, 3].map((idx) => (
+                  <div key={idx} className="skeleton" style={{ width: '100%', height: 44 }} />
+                ))}
+              </div>
+            ) : filteredStockBajo.length === 0 ? (
               <div style={{ padding: '16px 0', color: 'var(--text-muted)', fontSize: 13 }}>
                 Sin productos por debajo del mínimo.
               </div>

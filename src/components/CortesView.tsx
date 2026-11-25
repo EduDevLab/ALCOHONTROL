@@ -100,8 +100,24 @@ export function CortesView() {
       </div>
 
       {loading ? (
-        <div className="surface-card" style={{ padding: 48, textAlign: 'center', color: 'var(--text-secondary)' }}>
-          Calculando corte…
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20, flex: 1, minHeight: 0 }}>
+          <section className="surface-card" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 16 }}>
+            {[0, 1, 2, 3].map((idx) => (
+              <div key={idx} className="skeleton" style={{ width: '100%', height: 48 }} />
+            ))}
+          </section>
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 58%) minmax(0, 42%)', gap: 20, flex: 1 }}>
+            <section className="surface-card" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {[0, 1, 2, 3].map((idx) => (
+                <div key={idx} className="skeleton" style={{ width: '100%', height: 38 }} />
+              ))}
+            </section>
+            <section className="surface-card" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {[0, 1, 2].map((idx) => (
+                <div key={idx} className="skeleton" style={{ width: '100%', height: 38 }} />
+              ))}
+            </section>
+          </div>
         </div>
       ) : error ? (
         <div className="surface-card" style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'flex-start' }}>

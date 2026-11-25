@@ -169,8 +169,17 @@ export function PosView({ empleado, searchQuery, onVentaCompletada }: PosViewPro
       </div>
 
       {loading ? (
-        <div className="surface-card" style={{ padding: 48, textAlign: 'center', color: 'var(--text-secondary)' }}>
-          Cargando catálogo de productos…
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 62%) minmax(0, 38%)', gap: 20, flex: 1, minHeight: 0 }}>
+          <section className="surface-card" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div className="skeleton" style={{ width: '45%', height: 32, borderRadius: 999 }} />
+            {[0, 1, 2, 3, 4, 5].map((idx) => (
+              <div key={idx} className="skeleton" style={{ width: '100%', height: 42 }} />
+            ))}
+          </section>
+          <aside className="surface-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 16 }}>
+            <div className="skeleton" style={{ width: '100%', height: 220 }} />
+            <div className="skeleton" style={{ width: '100%', height: 74 }} />
+          </aside>
         </div>
       ) : error ? (
         <div className="surface-card" style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'flex-start' }}>

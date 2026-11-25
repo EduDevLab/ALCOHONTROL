@@ -107,9 +107,11 @@ export function EmpleadosView() {
       )}
 
       {loading ? (
-        <div className="surface-card" style={{ padding: 48, textAlign: 'center', color: 'var(--text-secondary)' }}>
-          Cargando personal…
-        </div>
+        <section className="surface-card" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {[0, 1, 2, 3].map((idx) => (
+            <div key={idx} className="skeleton" style={{ width: '100%', height: 42 }} />
+          ))}
+        </section>
       ) : error ? (
         <div className="surface-card" style={{ color: 'var(--status-danger)' }}>
           {error}

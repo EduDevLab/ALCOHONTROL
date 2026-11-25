@@ -667,6 +667,22 @@ body,
   animation: rowSlideIn 280ms var(--ease-out) both;
 }
 
+@keyframes skeletonPulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 0.95;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--bg-elevated) 0%, var(--bg-hover) 50%, var(--bg-elevated) 100%);
+  border-radius: var(--radius-xl);
+  animation: skeletonPulse 1.4s ease-in-out infinite;
+}
+
 @media (min-width: 1121px) {
   .app-shell {
     height: 100vh;
