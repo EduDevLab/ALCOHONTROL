@@ -84,7 +84,7 @@ export function EmpleadosView() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
       <div className="view-header">
         <h1 className="view-title">Personal del Expendio</h1>
         <button

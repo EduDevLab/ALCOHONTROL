@@ -185,7 +185,7 @@ export function CroquisView({ searchQuery, onStockChanged }: CroquisViewProps) {
   const q = searchQuery.trim().toLowerCase();
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
       <div className="view-header">
         <h1 className="view-title">Croquis del Expendio</h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -252,7 +252,7 @@ export function CroquisView({ searchQuery, onStockChanged }: CroquisViewProps) {
           </button>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 68%) minmax(0, 32%)', gap: 20, flex: 1 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 68%) minmax(0, 32%)', gap: 20, flex: 1, minHeight: 0 }}>
           {/* Lienzo interactivo */}
           <section className="surface-card" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

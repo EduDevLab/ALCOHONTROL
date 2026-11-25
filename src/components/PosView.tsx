@@ -163,7 +163,7 @@ export function PosView({ empleado, searchQuery, onVentaCompletada }: PosViewPro
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
       <div className="view-header">
         <h1 className="view-title">Punto de Venta</h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -188,9 +188,9 @@ export function PosView({ empleado, searchQuery, onVentaCompletada }: PosViewPro
           </button>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 62%) minmax(0, 38%)', gap: 20, flex: 1 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 62%) minmax(0, 38%)', gap: 20, flex: 1, minHeight: 0 }}>
           {/* Izquierda: Catálogo */}
-          <section className="surface-card" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <section className="surface-card" style={{ display: 'flex', flexDirection: 'column', gap: 16, minHeight: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               <button
                 type="button"

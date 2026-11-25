@@ -243,7 +243,7 @@ export function InventarioView({ searchQuery, onStockChanged }: InventarioViewPr
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
       <div className="view-header">
         <h1 className="view-title">Inventario y Catálogos</h1>
         <div style={{ display: 'flex', gap: 10 }}>
@@ -329,7 +329,7 @@ export function InventarioView({ searchQuery, onStockChanged }: InventarioViewPr
           </button>
         </div>
       ) : (
-        <section className="surface-card" style={{ flex: 1 }}>
+        <section className="surface-card" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
           {tab === 'productos' && (
             <>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', gap: 10 }}>
@@ -366,7 +366,8 @@ export function InventarioView({ searchQuery, onStockChanged }: InventarioViewPr
                   No hay productos que coincidan con el filtro.
                 </div>
               ) : (
-                <table className="clean-table">
+                <div className="scroll-area" style={{ flex: 1 }}>
+                  <table className="clean-table">
                   <thead>
                     <tr>
                       <th>Producto</th>
@@ -432,7 +433,8 @@ export function InventarioView({ searchQuery, onStockChanged }: InventarioViewPr
                       </tr>
                     ))}
                   </tbody>
-                </table>
+                  </table>
+                </div>
               )}
             </>
           )}

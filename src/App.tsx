@@ -77,20 +77,22 @@ export function App() {
       onSearchChange={setSearchQuery}
       stockBajo={stockBajo}
     >
-      {vistaEfectiva === 'dashboard' && (
-        <DashboardView searchQuery={searchQuery} onNavigate={setVistaActiva} />
-      )}
-      {vistaEfectiva === 'pos' && (
-        <PosView empleado={empleado} searchQuery={searchQuery} onVentaCompletada={refreshAlerts} />
-      )}
-      {vistaEfectiva === 'croquis' && (
-        <CroquisView searchQuery={searchQuery} onStockChanged={refreshAlerts} />
-      )}
-      {vistaEfectiva === 'inventario' && (
-        <InventarioView searchQuery={searchQuery} onStockChanged={refreshAlerts} />
-      )}
-      {vistaEfectiva === 'cortes' && <CortesView />}
-      {vistaEfectiva === 'empleados' && <EmpleadosView />}
+      <div key={vistaEfectiva} className="view-stage">
+        {vistaEfectiva === 'dashboard' && (
+          <DashboardView searchQuery={searchQuery} onNavigate={setVistaActiva} />
+        )}
+        {vistaEfectiva === 'pos' && (
+          <PosView empleado={empleado} searchQuery={searchQuery} onVentaCompletada={refreshAlerts} />
+        )}
+        {vistaEfectiva === 'croquis' && (
+          <CroquisView searchQuery={searchQuery} onStockChanged={refreshAlerts} />
+        )}
+        {vistaEfectiva === 'inventario' && (
+          <InventarioView searchQuery={searchQuery} onStockChanged={refreshAlerts} />
+        )}
+        {vistaEfectiva === 'cortes' && <CortesView />}
+        {vistaEfectiva === 'empleados' && <EmpleadosView />}
+      </div>
     </Shell>
   );
 }

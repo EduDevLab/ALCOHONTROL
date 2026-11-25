@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import {
   Bell,
   ChartBar,
@@ -59,6 +59,15 @@ export function Shell({
   const [alertsOpen, setAlertsOpen] = useState(false);
   const isAdmin = esAdministrador(empleado.Puesto);
   const visibleNav = NAV_ITEMS.filter((item) => !item.adminOnly || isAdmin);
+
+  useEffect(() => {
+    if (!alertsOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setAlertsOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [alertsOpen]);
 
   return (
     <div className="app-shell">
@@ -127,7 +136,13 @@ export function Shell({
             </button>
 
             {alertsOpen && (
-              <div className="alerts-popover" role="dialog" aria-label="Alertas de stock mínimo">
+              <>
+                <div
+                  className="alerts-backdrop"
+                  onClick={() => setAlertsOpen(false)}
+                  aria-hidden="true"
+                />
+                <div className="alerts-popover" role="dialog" aria-label="Alertas de stock mínimo">
                 <div
                   style={{
                     padding: '12px 14px',
@@ -197,7 +212,8 @@ export function Shell({
                     </div>
                   </div>
                 )}
-              </div>
+                </div>
+              </>
             )}
           </div>
 

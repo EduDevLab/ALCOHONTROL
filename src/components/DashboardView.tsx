@@ -186,6 +186,18 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
   const activeCoord = actualCoords[hoveredIdx];
   const activePoint = chartSeries[hoveredIdx];
 
+  // Etiquetas de eje X espaciadas sin traslapes (máx. ~7 etiquetas)
+  const tickStep = Math.max(1, Math.ceil(chartSeries.length / 7));
+  const minGapToEnd = Math.max(2, Math.floor(tickStep * 0.7));
+  const visibleTicks = new Set<number>();
+  for (let i = 0; i < chartSeries.length; i += tickStep) {
+    if (i < chartSeries.length - 1 && chartSeries.length - 1 - i < minGapToEnd) continue;
+    visibleTicks.add(i);
+  }
+  if (chartSeries.length > 0) {
+    visibleTicks.add(chartSeries.length - 1);
+  }
+
   // Geometría SVG para Gauge semicircular
   const gaugeRadius = 92;
   const gaugeCircumference = Math.PI * gaugeRadius;
@@ -213,7 +225,7 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
       <div className="view-header">
         <h1 className="view-title">Resumen Operativo</h1>
         <button
@@ -230,7 +242,7 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
         {/* COLUMNA CENTRAL (~68%) */}
         <div className="dashboard-left">
           {/* Tarjeta Principal Superior: Gráfico de Tendencia */}
-          <section className="surface-card">
+          <section className="surface-card" style={{ flexShrink: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <div>
                 <h2 style={{ margin: 0, fontSize: 16, fontWeight: 500 }}>Tendencia de Ventas</h2>
@@ -257,7 +269,7 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
             </div>
 
             <div style={{ position: 'relative', width: '100%' }}>
-              <svg viewBox={`0 0 ${svgW} ${svgH}`} style={{ width: '100%', height: 'auto', display: 'block' }}>
+              <svg key={rangoDias} viewBox={`0 0 ${svgW} ${svgH}`} style={{ width: '100%', maxHeight: 215, height: 'auto', display: 'block' }}>
                 <defs>
                   <linearGradient id="goldAreaGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#e5a93b" stopOpacity="0.22" />
@@ -306,7 +318,14 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
                 {areaPath && <path d={areaPath} fill="url(#goldAreaGrad)" />}
 
                 {actualPath && (
-                  <path d={actualPath} fill="none" stroke="#e5a93b" strokeWidth="2.5" strokeLinecap="round" />
+                  <path
+                    d={actualPath}
+                    fill="none"
+                    stroke="#e5a93b"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    className="chart-line-animated"
+                  />
                 )}
 
                 {activeCoord && activePoint && (
@@ -331,7 +350,7 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
                 )}
 
                 {chartSeries.map((pt, idx) => {
-                  const showLabel = chartSeries.length <= 8 || idx % 2 === 0 || idx === chartSeries.length - 1;
+                  const showLabel = visibleTicks.has(idx);
                   return (
                     <g key={pt.label}>
                       {showLabel && (
@@ -370,6 +389,7 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
                     borderRadius: 'var(--radius-xl)',
                     padding: '6px 12px',
                     pointerEvents: 'none',
+                    transition: 'left 130ms var(--ease-out)',
                   }}
                 >
                   <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{activePoint.label}</div>
@@ -383,8 +403,8 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
 
           {/* Fila Inferior 62% / 38% */}
           <div className="dashboard-bottom-row">
-            <section className="surface-card">
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <section className="surface-card" style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexShrink: 0 }}>
                 <h2 style={{ margin: 0, fontSize: 16, fontWeight: 500 }}>Últimas Ventas</h2>
                 <button
                   type="button"
@@ -401,7 +421,8 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
                   No hay ventas registradas para mostrar.
                 </div>
               ) : (
-                <table className="clean-table">
+                <div className="scroll-area" style={{ flex: 1 }}>
+                  <table className="clean-table">
                   <thead>
                     <tr>
                       <th>Empleado</th>
@@ -427,6 +448,7 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
                     ))}
                   </tbody>
                 </table>
+                </div>
               )}
             </section>
 
@@ -492,7 +514,7 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
         {/* COLUMNA DERECHA (~32%) */}
         <aside
           className="surface-card"
-          style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 24 }}
+          style={{ display: 'flex', flexDirection: 'column', gap: 20, minHeight: 0 }}
         >
           {/* Mitad Superior: Gauge Semicircular */}
           <div>
@@ -552,14 +574,15 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
                   strokeLinecap="round"
                   strokeDasharray={gaugeCircumference}
                   strokeDashoffset={gaugeDashOffset}
+                  className="gauge-arc-animated"
                 />
               </svg>
             </div>
           </div>
 
           {/* Mitad Inferior: Feed Cronológico de Alertas */}
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexShrink: 0 }}>
               <span style={{ fontSize: 15, fontWeight: 500 }}>Alertas de Stock</span>
               <span className="badge badge-warn num-tabular">{stockBajo.length}</span>
             </div>
@@ -569,7 +592,7 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
                 Sin productos por debajo del mínimo.
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div className="scroll-area" style={{ display: 'flex', flexDirection: 'column', gap: 14, flex: 1, paddingRight: 4 }}>
                 {filteredStockBajo.map((item) => {
                   const agotado = item.Existencias === 0;
                   return (

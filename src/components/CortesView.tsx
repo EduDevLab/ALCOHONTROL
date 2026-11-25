@@ -79,7 +79,7 @@ export function CortesView() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
       <div className="view-header">
         <h1 className="view-title">Cortes de Ventas y Reportes</h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
@@ -126,7 +126,7 @@ export function CortesView() {
         </div>
       ) : (
         corte && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20, flex: 1, minHeight: 0 }}>
             {/* Métricas en línea */}
             <section
               className="surface-card"
@@ -158,14 +158,15 @@ export function CortesView() {
               </div>
             </section>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 58%) minmax(0, 42%)', gap: 20 }}>
-              <section className="surface-card">
-                <h2 style={{ margin: '0 0 12px', fontSize: 16, fontWeight: 500 }}>Historial de Ventas del Corte</h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 58%) minmax(0, 42%)', gap: 20, flex: 1, minHeight: 0 }}>
+              <section className="surface-card" style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+                <h2 style={{ margin: '0 0 12px', fontSize: 16, fontWeight: 500, flexShrink: 0 }}>Historial de Ventas del Corte</h2>
                 {corte.ventas.length === 0 ? (
                   <div style={{ padding: '24px 0', color: 'var(--text-muted)', fontSize: 13 }}>
                     No hubo ventas registradas en este periodo.
                   </div>
                 ) : (
+                  <div className="scroll-area" style={{ flex: 1 }}>
                   <table className="clean-table">
                     <thead>
                       <tr>
@@ -204,6 +205,7 @@ export function CortesView() {
                       ))}
                     </tbody>
                   </table>
+                  </div>
                 )}
               </section>
 
