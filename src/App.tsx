@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { AnimatePresence, MotionConfig, motion } from 'motion/react';
 import { CortesView } from './components/CortesView.tsx';
 import { CroquisView } from './components/CroquisView.tsx';
 import { DashboardView } from './components/DashboardView.tsx';
@@ -68,32 +69,43 @@ export function App() {
     vistaActiva === 'empleados' && !esAdministrador(empleado.Puesto) ? 'dashboard' : vistaActiva;
 
   return (
-    <Shell
-      empleado={empleado}
-      vistaActiva={vistaEfectiva}
-      onCambiarVista={setVistaActiva}
-      onCerrarTurno={handleCerrarTurno}
-      searchQuery={searchQuery}
-      onSearchChange={setSearchQuery}
-      stockBajo={stockBajo}
-    >
-      <div key={vistaEfectiva} className="view-stage">
-        {vistaEfectiva === 'dashboard' && (
-          <DashboardView searchQuery={searchQuery} onNavigate={setVistaActiva} />
-        )}
-        {vistaEfectiva === 'pos' && (
-          <PosView empleado={empleado} searchQuery={searchQuery} onVentaCompletada={refreshAlerts} />
-        )}
-        {vistaEfectiva === 'croquis' && (
-          <CroquisView searchQuery={searchQuery} onStockChanged={refreshAlerts} />
-        )}
-        {vistaEfectiva === 'inventario' && (
-          <InventarioView searchQuery={searchQuery} onStockChanged={refreshAlerts} />
-        )}
-        {vistaEfectiva === 'cortes' && <CortesView />}
-        {vistaEfectiva === 'empleados' && <EmpleadosView />}
-      </div>
-    </Shell>
+    <MotionConfig reducedMotion="user">
+      <Shell
+        empleado={empleado}
+        vistaActiva={vistaEfectiva}
+        onCambiarVista={setVistaActiva}
+        onCerrarTurno={handleCerrarTurno}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        stockBajo={stockBajo}
+      >
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={vistaEfectiva}
+            className="view-stage"
+            initial={{ opacity: 0, y: 10, scale: 0.992 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -8, scale: 0.992 }}
+            transition={{ duration: 0.22, ease: [0.23, 1, 0.32, 1] }}
+          >
+            {vistaEfectiva === 'dashboard' && (
+              <DashboardView searchQuery={searchQuery} onNavigate={setVistaActiva} />
+            )}
+            {vistaEfectiva === 'pos' && (
+              <PosView empleado={empleado} searchQuery={searchQuery} onVentaCompletada={refreshAlerts} />
+            )}
+            {vistaEfectiva === 'croquis' && (
+              <CroquisView searchQuery={searchQuery} onStockChanged={refreshAlerts} />
+            )}
+            {vistaEfectiva === 'inventario' && (
+              <InventarioView searchQuery={searchQuery} onStockChanged={refreshAlerts} />
+            )}
+            {vistaEfectiva === 'cortes' && <CortesView />}
+            {vistaEfectiva === 'empleados' && <EmpleadosView />}
+          </motion.div>
+        </AnimatePresence>
+      </Shell>
+    </MotionConfig>
   );
 }
 

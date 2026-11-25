@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import {
   Bell,
   ChartBar,
@@ -11,6 +12,7 @@ import {
   Users,
   type Icon,
 } from '@phosphor-icons/react';
+import { CategoryIcon } from './CategoryIcon.tsx';
 import { esAdministrador, type Empleado, type ProductoStockBajo, type VistaId } from '../types/alcohontrol.ts';
 
 interface NavItem {
@@ -92,7 +94,18 @@ export function Shell({
                 aria-label={item.label}
                 aria-current={active ? 'page' : undefined}
               >
-                <IconComponent size={20} weight={active ? 'bold' : 'regular'} />
+                {active && (
+                  <motion.span
+                    layoutId="nav-active-pill"
+                    className="nav-active-pill"
+                    transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                  />
+                )}
+                <IconComponent
+                  size={20}
+                  weight={active ? 'bold' : 'regular'}
+                  style={{ position: 'relative', zIndex: 1 }}
+                />
               </button>
             );
           })}
@@ -135,86 +148,118 @@ export function Shell({
               {stockBajo.length > 0 && <span className="alerts-dot" />}
             </button>
 
-            {alertsOpen && (
-              <>
-                <div
-                  className="alerts-backdrop"
-                  onClick={() => setAlertsOpen(false)}
-                  aria-hidden="true"
-                />
-                <div className="alerts-popover" role="dialog" aria-label="Alertas de stock mínimo">
-                <div
-                  style={{
-                    padding: '12px 14px',
-                    borderBottom: '1px solid var(--border-subtle)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                  }}
-                >
-                  <span style={{ fontWeight: 600, fontSize: 13 }}>Stock bajo (≤ 30)</span>
-                  <span className="badge badge-warn num-tabular">{stockBajo.length}</span>
-                </div>
+            <AnimatePresence>
+              {alertsOpen && (
+                <>
+                  <motion.div
+                    className="alerts-backdrop"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.16, ease: [0.23, 1, 0.32, 1] }}
+                    onClick={() => setAlertsOpen(false)}
+                    aria-hidden="true"
+                  />
+                  <motion.div
+                    className="alerts-popover"
+                    role="dialog"
+                    aria-label="Alertas de stock mínimo"
+                    initial={{ opacity: 0, scale: 0.96, y: -4 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.96, y: -4 }}
+                    transition={{ duration: 0.18, ease: [0.23, 1, 0.32, 1] }}
+                  >
+                    <div
+                      style={{
+                        padding: '12px 14px',
+                        borderBottom: '1px solid var(--border-subtle)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                      }}
+                    >
+                      <span style={{ fontWeight: 600, fontSize: 13 }}>Stock bajo (≤ 30)</span>
+                      <span className="badge badge-warn num-tabular">{stockBajo.length}</span>
+                    </div>
 
-                {stockBajo.length === 0 ? (
-                  <div style={{ padding: 16, fontSize: 12, color: 'var(--text-secondary)' }}>
-                    Todo el inventario está por encima del mínimo.
-                  </div>
-                ) : (
-                  <div>
-                    {stockBajo.map((item) => (
-                      <div
-                        key={item.IdProducto}
-                        style={{
-                          padding: '10px 14px',
-                          borderBottom: '1px solid var(--border-subtle)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          gap: 10,
-                        }}
-                      >
-                        <div style={{ minWidth: 0 }}>
+                    {stockBajo.length === 0 ? (
+                      <div style={{ padding: 16, fontSize: 12, color: 'var(--text-secondary)' }}>
+                        Todo el inventario está por encima del mínimo.
+                      </div>
+                    ) : (
+                      <div>
+                        {stockBajo.map((item) => (
                           <div
+                            key={item.IdProducto}
                             style={{
-                              fontSize: 13,
-                              fontWeight: 500,
-                              whiteSpace: 'nowrap',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
+                              padding: '10px 14px',
+                              borderBottom: '1px solid var(--border-subtle)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              gap: 10,
                             }}
                           >
-                            {item.Producto}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                              <span
+                                style={{
+                                  width: 28,
+                                  height: 28,
+                                  borderRadius: 8,
+                                  background: 'var(--bg-elevated)',
+                                  border: '1px solid var(--border-subtle)',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  color: item.Existencias === 0 ? 'var(--status-danger)' : 'var(--status-warn)',
+                                  flexShrink: 0,
+                                }}
+                              >
+                                <CategoryIcon categoria={item.Categoria} size={16} />
+                              </span>
+                              <div style={{ minWidth: 0 }}>
+                                <div
+                                  style={{
+                                    fontSize: 13,
+                                    fontWeight: 500,
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                  }}
+                                >
+                                  {item.Producto}
+                                </div>
+                                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{item.Categoria}</div>
+                              </div>
+                            </div>
+                            <span
+                              className={`badge num-tabular ${
+                                item.Existencias === 0 ? 'badge-danger' : 'badge-warn'
+                              }`}
+                            >
+                              {item.Existencias} uds
+                            </span>
                           </div>
-                          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{item.Categoria}</div>
+                        ))}
+                        <div style={{ padding: 10 }}>
+                          <button
+                            type="button"
+                            className="btn"
+                            style={{ width: '100%' }}
+                            onClick={() => {
+                              setAlertsOpen(false);
+                              onCambiarVista('inventario');
+                            }}
+                          >
+                            Ir a Inventario
+                          </button>
                         </div>
-                        <span
-                          className={`badge num-tabular ${
-                            item.Existencias === 0 ? 'badge-danger' : 'badge-warn'
-                          }`}
-                        >
-                          {item.Existencias} uds
-                        </span>
                       </div>
-                    ))}
-                    <div style={{ padding: 10 }}>
-                      <button
-                        type="button"
-                        className="btn"
-                        style={{ width: '100%' }}
-                        onClick={() => {
-                          setAlertsOpen(false);
-                          onCambiarVista('inventario');
-                        }}
-                      >
-                        Ir a Inventario
-                      </button>
-                    </div>
-                  </div>
-                )}
-                </div>
-              </>
-            )}
+                    )}
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
           </div>
 
           <div className="topbar-user">
