@@ -45,7 +45,6 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [rangoDias, setRangoDias] = useState<7 | 14 | 30>(7);
-  const [zoomScaleX, setZoomScaleX] = useState(1);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [todayIso] = useState(() => getTodayIso());
 
@@ -229,10 +228,8 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
     });
   }
 
-  // Geometría SVG para Gauge semicircular
-  const gaugeRadius = 92;
-  const gaugeCircumference = Math.PI * gaugeRadius;
-  const gaugeDashOffset = gaugeCircumference * (1 - Math.min(100, Math.max(0, stockCounts.pct)) / 100);
+  // Geometría SVG para Gauge semicircular (pathLength = 100 para barrido directo)
+  const gaugeDashOffset = 100 - Math.min(100, Math.max(0, stockCounts.pct));
 
   if (loading) {
     return (
@@ -285,7 +282,13 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
         {/* COLUMNA CENTRAL (~68%) */}
         <div className="dashboard-left">
           {/* Tarjeta Principal Superior: Gráfico de Tendencia */}
-          <section className="surface-card" style={{ flexShrink: 0 }}>
+          <motion.section
+            className="surface-card"
+            style={{ flexShrink: 0 }}
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.36, delay: 0.02, ease: EASE_OUT }}
+          >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
               <div>
                 <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>Tendencia de Ventas</h2>
@@ -312,7 +315,6 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
                       type="button"
                       onClick={() => {
                         if (dias !== rangoDias) {
-                          setZoomScaleX(dias > rangoDias ? 1.32 : 0.74);
                           setRangoDias(dias);
                           setActiveIndex(null);
                         }
@@ -365,6 +367,9 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
                     <stop offset="0%" stopColor="#e5a93b" stopOpacity="0.24" />
                     <stop offset="100%" stopColor="#e5a93b" stopOpacity="0" />
                   </linearGradient>
+                  <clipPath id="plotAreaClip">
+                    <rect x={padL} y={padT - 4} width={plotW + 4} height={plotH + 8} />
+                  </clipPath>
                 </defs>
 
                 {[0, 0.25, 0.5, 0.75, 1].map((t) => {
@@ -394,13 +399,7 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
                   );
                 })}
 
-                <motion.g
-                  key={rangoDias}
-                  initial={{ opacity: 0, scaleX: zoomScaleX, scaleY: 0.94 }}
-                  animate={{ opacity: 1, scaleX: 1, scaleY: 1 }}
-                  transition={{ duration: 0.36, ease: EASE_OUT }}
-                  style={{ transformOrigin: `${svgW - padR}px ${padT + plotH}px` }}
-                >
+                <g key={rangoDias} clipPath="url(#plotAreaClip)" className="chart-plot-enter">
                   {prevPath && (
                     <path
                       d={prevPath}
@@ -417,13 +416,15 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
                   {actualPath && (
                     <path
                       d={actualPath}
+                      pathLength={1}
+                      className="chart-path-draw"
                       fill="none"
                       stroke="#e5a93b"
                       strokeWidth="2.5"
                       strokeLinecap="round"
                     />
                   )}
-                </motion.g>
+                </g>
 
                 {activeCoord && activePoint && (
                   <g>
@@ -503,11 +504,17 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
                 )}
               </AnimatePresence>
             </div>
-          </section>
+          </motion.section>
 
           {/* Fila Inferior 62% / 38% */}
           <div className="dashboard-bottom-row">
-            <section className="surface-card" style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+            <motion.section
+              className="surface-card"
+              style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.38, delay: 0.08, ease: EASE_OUT }}
+            >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexShrink: 0 }}>
                 <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>Últimas Ventas</h2>
                 <button
@@ -536,8 +543,12 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredVentas.map((v) => (
-                        <tr key={v.IdVenta}>
+                      {filteredVentas.map((v, idx) => (
+                        <tr
+                          key={v.IdVenta}
+                          className="stagger-row"
+                          style={{ animationDelay: `${100 + idx * 45}ms` }}
+                        >
                           <td style={{ fontWeight: 500 }}>{v.Empleado}</td>
                           <td>
                             <span className="badge badge-neutral num-tabular">{v.TotalArticulosVendidos} uds</span>
@@ -554,12 +565,15 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
                   </table>
                 </div>
               )}
-            </section>
+            </motion.section>
 
             {/* Valor de Inventario + Gráfica coherente de Distribución por Categoría */}
-            <section
+            <motion.section
               className="surface-card"
               style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 14, minHeight: 0 }}
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.38, delay: 0.14, ease: EASE_OUT }}
             >
               <div>
                 <h2 style={{ margin: '0 0 12px', fontSize: 16, fontWeight: 600 }}>Valor de Inventario</h2>
@@ -583,15 +597,16 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
                   }}
                   aria-label="Distribución de inventario por categoría"
                 >
-                  {distribucionCategorias.map((cat) => (
+                  {distribucionCategorias.map((cat, idx) => (
                     <div
                       key={cat.nombre}
+                      className="bar-segment-enter"
                       style={{
                         width: `${Math.max(4, cat.pct)}%`,
                         height: '100%',
                         borderRadius: 999,
                         background: cat.color,
-                        transition: 'width 400ms var(--ease-out)',
+                        animationDelay: `${160 + idx * 70}ms`,
                       }}
                       title={`${cat.nombre}: ${formatCurrency(cat.valor)} (${cat.pct}%)`}
                     />
@@ -656,14 +671,17 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
                 </span>
                 <span style={{ color: 'var(--text-muted)' }}>· {stockBajo.length} en alerta</span>
               </div>
-            </section>
+            </motion.section>
           </div>
         </div>
 
         {/* COLUMNA DERECHA (~32%) */}
-        <aside
+        <motion.aside
           className="surface-card"
           style={{ display: 'flex', flexDirection: 'column', gap: 20, minHeight: 0 }}
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.1, ease: EASE_OUT }}
         >
           {/* Mitad Superior: Gauge Semicircular sin recorte tosco */}
           <div style={{ flexShrink: 0 }}>
@@ -714,6 +732,7 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
                   stroke="var(--bg-elevated)"
                   strokeWidth="20"
                   strokeLinecap="round"
+                  pathLength={100}
                 />
 
                 <path
@@ -722,9 +741,10 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
                   stroke="url(#gaugeGoldGrad)"
                   strokeWidth="20"
                   strokeLinecap="round"
-                  strokeDasharray={gaugeCircumference}
+                  pathLength={100}
+                  strokeDasharray={100}
                   strokeDashoffset={gaugeDashOffset}
-                  className="gauge-arc-animated"
+                  className="gauge-arc-sweep"
                   style={{ filter: 'drop-shadow(0 0 8px rgba(229, 169, 59, 0.28))' }}
                 />
               </svg>
@@ -744,12 +764,19 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
               </div>
             ) : (
               <div className="scroll-area" style={{ display: 'flex', flexDirection: 'column', gap: 12, flex: 1, paddingRight: 4 }}>
-                {filteredStockBajo.map((item) => {
+                {filteredStockBajo.map((item, idx) => {
                   const agotado = item.Existencias === 0;
                   return (
                     <div
                       key={item.IdProducto}
-                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}
+                      className="stagger-row"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: 12,
+                        animationDelay: `${140 + idx * 45}ms`,
+                      }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
                         <div
@@ -805,7 +832,7 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
               </div>
             )}
           </div>
-        </aside>
+        </motion.aside>
       </div>
     </div>
   );

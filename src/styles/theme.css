@@ -593,23 +593,78 @@ body,
   }
 }
 
-/* Gráficas animadas */
-@keyframes drawLine {
+/* Gráficas y entradas escalonadas */
+@keyframes chartPlotRise {
   from {
-    stroke-dashoffset: 1600;
+    opacity: 0;
+    transform: scaleY(0.15);
+  }
+  to {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+@keyframes chartPathDraw {
+  from {
+    stroke-dashoffset: 1;
   }
   to {
     stroke-dashoffset: 0;
   }
 }
 
-.chart-line-animated {
-  stroke-dasharray: 1600;
-  animation: drawLine 700ms var(--ease-out) both;
+@keyframes gaugeSweep {
+  from {
+    stroke-dashoffset: 100;
+  }
 }
 
-.gauge-arc-animated {
+@keyframes barGrow {
+  from {
+    opacity: 0.4;
+    transform: scaleX(0);
+  }
+  to {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
+
+@keyframes rowSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.chart-plot-enter {
+  transform-origin: 0px 174px;
+  animation: chartPlotRise 420ms var(--ease-out) both;
+}
+
+.chart-path-draw {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+  animation: chartPathDraw 520ms var(--ease-out) both;
+}
+
+.gauge-arc-sweep {
+  animation: gaugeSweep 700ms var(--ease-out) both;
   transition: stroke-dashoffset 650ms var(--ease-out);
+}
+
+.bar-segment-enter {
+  transform-origin: left;
+  animation: barGrow 550ms var(--ease-out) both;
+}
+
+.stagger-row {
+  animation: rowSlideIn 280ms var(--ease-out) both;
 }
 
 @media (min-width: 1121px) {
@@ -625,14 +680,15 @@ body,
 @media (prefers-reduced-motion: reduce) {
   .view-stage,
   .alerts-popover,
-  .alerts-backdrop {
+  .alerts-backdrop,
+  .chart-plot-enter,
+  .stagger-row {
     animation-name: fadeOnly;
   }
-  .chart-line-animated {
+  .chart-path-draw,
+  .gauge-arc-sweep,
+  .bar-segment-enter {
     animation: none;
-    stroke-dasharray: none;
-  }
-  .gauge-arc-animated {
     transition: none;
   }
 }
