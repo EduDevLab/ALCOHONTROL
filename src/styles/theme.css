@@ -771,3 +771,98 @@ body,
     grid-template-columns: 1fr;
   }
 }
+
+/* ============================================================================
+   PUNTO DE VENTA — PRODUCT CARDS & PACK ACTIONS
+   ============================================================================ */
+
+.pos-products-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
+  gap: 14px;
+  align-content: start;
+}
+
+.pos-product-card {
+  height: 148px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-radius: var(--radius-xl);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  position: relative;
+  cursor: pointer;
+  user-select: none;
+  text-align: left;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    transform 120ms var(--ease-out),
+    box-shadow 160ms ease;
+}
+
+.pos-product-card:hover:not(.is-disabled) {
+  border-color: rgba(229, 169, 59, 0.45);
+  background: var(--bg-hover);
+  box-shadow: 0 10px 24px -10px rgba(0, 0, 0, 0.5);
+}
+
+.pos-product-card:active:not(.is-disabled) {
+  transform: scale(0.98);
+}
+
+.pos-product-card.in-cart {
+  border-color: var(--accent-gold);
+  box-shadow: inset 0 0 0 1px rgba(229, 169, 59, 0.25);
+}
+
+.pos-product-card.is-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.pos-pack-actions {
+  display: inline-flex;
+  gap: 5px;
+  opacity: 0;
+  transform: translateY(4px);
+  pointer-events: none;
+  transition: opacity 150ms var(--ease-out), transform 150ms var(--ease-out);
+}
+
+.pos-product-card:hover .pos-pack-actions,
+.pos-product-card:focus-within .pos-pack-actions {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.pos-pack-btn {
+  height: 26px;
+  padding: 0 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(229, 169, 59, 0.35);
+  background: rgba(8, 9, 12, 0.85);
+  color: var(--accent-gold);
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 140ms ease, color 140ms ease, transform 100ms var(--ease-out);
+}
+
+.pos-pack-btn:hover:not(:disabled) {
+  background: var(--accent-gold);
+  color: var(--accent-gold-text);
+}
+
+.pos-pack-btn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.pos-pack-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
