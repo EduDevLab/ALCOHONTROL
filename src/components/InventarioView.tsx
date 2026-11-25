@@ -1,21 +1,33 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { PencilSimple, Plus, Trash } from '@phosphor-icons/react';
+import { CheckCircle, Package, Plus, Tag, Truck, WarningCircle, X } from '@phosphor-icons/react';
+import { AnimatePresence, motion } from 'motion/react';
+import {
+  InventarioModals,
+  type AjusteTarget,
+  type CatFormState,
+  type DeleteTarget,
+  type ProdFormState,
+  type ProvFormState,
+} from './inventario/InventarioModals.tsx';
+import { InventarioTables, type InventarioTabId } from './inventario/InventarioTables.tsx';
 import { ErrorCard } from './ui/ErrorCard.tsx';
-import { Modal } from './ui/Modal.tsx';
-import { StockBadge } from './ui/StockBadge.tsx';
 import { api } from '../services/api.ts';
 import type { Categoria, Producto, Proveedor, ReporteProducto } from '../types/alcohontrol.ts';
-import { formatCurrency } from '../utils/format.ts';
 
 interface InventarioViewProps {
   searchQuery: string;
   onStockChanged: () => void;
 }
 
-type TabId = 'productos' | 'categorias' | 'proveedores';
+interface FeedbackNotice {
+  type: 'success' | 'error';
+  text: string;
+}
+
+const EASE_OUT = [0.23, 1, 0.32, 1] as const;
 
 export function InventarioView({ searchQuery, onStockChanged }: InventarioViewProps) {
-  const [tab, setTab] = useState<TabId>('productos');
+  const [tab, setTab] = useState<InventarioTabId>('productos');
   const [reporteProds, setReporteProds] = useState<ReporteProducto[]>([]);
   const [productosRaw, setProductosRaw] = useState<Producto[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
@@ -24,29 +36,22 @@ export function InventarioView({ searchQuery, onStockChanged }: InventarioViewPr
   const [soloStockBajo, setSoloStockBajo] = useState(false);
 
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [actionError, setActionError] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<FeedbackNotice | null>(null);
 
-  // Modales/formularios
-  const [prodForm, setProdForm] = useState<{
-    open: boolean;
-    id?: number;
-    Nombre: string;
-    IdCategorias: number;
-    Precio: string;
-    Existencias: string;
-    IdProveedor: number;
-  }>({ open: false, Nombre: '', IdCategorias: 0, Precio: '', Existencias: '0', IdProveedor: 0 });
-
-  const [ajusteTarget, setAjusteTarget] = useState<{ id: number; nombre: string; actual: number; delta: string } | null>(
-    null,
-  );
-  const [catForm, setCatForm] = useState<{ open: boolean; id?: number; Nombre: string }>({ open: false, Nombre: '' });
-  const [provForm, setProvForm] = useState<{ open: boolean; id?: number; Nombre: string; Telefono: string }>({
+  const [prodForm, setProdForm] = useState<ProdFormState>({
     open: false,
     Nombre: '',
-    Telefono: '',
+    IdCategorias: 0,
+    Precio: '',
+    Existencias: '0',
+    IdProveedor: 0,
   });
+  const [ajusteTarget, setAjusteTarget] = useState<AjusteTarget | null>(null);
+  const [catForm, setCatForm] = useState<CatFormState>({ open: false, Nombre: '' });
+  const [provForm, setProvForm] = useState<ProvFormState>({ open: false, Nombre: '', Telefono: '' });
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
 
   const cargarTodo = useCallback(async () => {
     setLoading(true);
@@ -97,6 +102,12 @@ export function InventarioView({ searchQuery, onStockChanged }: InventarioViewPr
     };
   }, []);
 
+  useEffect(() => {
+    if (!feedback || feedback.type !== 'success') return;
+    const timer = window.setTimeout(() => setFeedback(null), 4000);
+    return () => window.clearTimeout(timer);
+  }, [feedback]);
+
   const prodsFiltrados = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return reporteProds.filter((p) => {
@@ -111,8 +122,29 @@ export function InventarioView({ searchQuery, onStockChanged }: InventarioViewPr
     });
   }, [reporteProds, filtroCat, soloStockBajo, searchQuery]);
 
+  const totalStockBajo = useMemo(
+    () => reporteProds.filter((p) => p.Existencias <= 30).length,
+    [reporteProds],
+  );
+
+  const conteoPorCategoria = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const p of reporteProds) {
+      map.set(p.Categoria, (map.get(p.Categoria) ?? 0) + 1);
+    }
+    return map;
+  }, [reporteProds]);
+
+  const conteoPorProveedor = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const p of reporteProds) {
+      map.set(p.Proveedor, (map.get(p.Proveedor) ?? 0) + 1);
+    }
+    return map;
+  }, [reporteProds]);
+
   const abrirNuevoProducto = () => {
-    setActionError(null);
+    setFeedback(null);
     setProdForm({
       open: true,
       Nombre: '',
@@ -126,7 +158,7 @@ export function InventarioView({ searchQuery, onStockChanged }: InventarioViewPr
   const abrirEditarProducto = (id: number) => {
     const raw = productosRaw.find((p) => p.IdProducto === id);
     if (!raw) return;
-    setActionError(null);
+    setFeedback(null);
     setProdForm({
       open: true,
       id: raw.IdProducto,
@@ -140,10 +172,13 @@ export function InventarioView({ searchQuery, onStockChanged }: InventarioViewPr
 
   const guardarProducto = async (e: React.FormEvent) => {
     e.preventDefault();
-    setActionError(null);
+    if (submitting) return;
+    setSubmitting(true);
+    setFeedback(null);
     try {
+      const nombre = prodForm.Nombre.trim();
       const payload = {
-        Nombre: prodForm.Nombre.trim(),
+        Nombre: nombre,
         IdCategorias: prodForm.IdCategorias,
         Precio: Number(prodForm.Precio),
         Existencias: Number(prodForm.Existencias),
@@ -151,105 +186,180 @@ export function InventarioView({ searchQuery, onStockChanged }: InventarioViewPr
       };
       if (prodForm.id) {
         await api.productos.actualizar(prodForm.id, payload);
+        setFeedback({ type: 'success', text: `Producto "${nombre}" actualizado correctamente.` });
       } else {
         await api.productos.crear(payload);
+        setFeedback({ type: 'success', text: `Producto "${nombre}" agregado al catálogo.` });
       }
       setProdForm((prev) => ({ ...prev, open: false }));
       await cargarTodo();
       onStockChanged();
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : 'No se pudo guardar el producto.');
+      setFeedback({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'No se pudo guardar el producto.',
+      });
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const aplicarAjuste = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!ajusteTarget) return;
-    setActionError(null);
+    if (!ajusteTarget || submitting) return;
+    setSubmitting(true);
+    setFeedback(null);
     try {
-      await api.productos.ajustarExistencias(ajusteTarget.id, { delta: Number(ajusteTarget.delta) });
+      const delta = Number(ajusteTarget.delta);
+      const res = await api.productos.ajustarExistencias(ajusteTarget.id, { delta });
+      setFeedback({
+        type: 'success',
+        text: `Stock de "${ajusteTarget.nombre}" actualizado a ${res.Existencias} uds.`,
+      });
       setAjusteTarget(null);
       await cargarTodo();
       onStockChanged();
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : 'No se pudo ajustar el stock.');
-    }
-  };
-
-  const eliminarProducto = async (id: number) => {
-    setActionError(null);
-    try {
-      await api.productos.eliminar(id);
-      await cargarTodo();
-      onStockChanged();
-    } catch (err) {
-      setActionError(err instanceof Error ? err.message : 'No se pudo eliminar el producto.');
+      setFeedback({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'No se pudo ajustar el stock.',
+      });
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const guardarCategoria = async (e: React.FormEvent) => {
     e.preventDefault();
-    setActionError(null);
+    if (submitting) return;
+    setSubmitting(true);
+    setFeedback(null);
     try {
+      const nombre = catForm.Nombre.trim();
       if (catForm.id) {
-        await api.categorias.actualizar(catForm.id, { Nombre: catForm.Nombre.trim() });
+        await api.categorias.actualizar(catForm.id, { Nombre: nombre });
+        setFeedback({ type: 'success', text: `Categoría "${nombre}" actualizada.` });
       } else {
-        await api.categorias.crear({ Nombre: catForm.Nombre.trim() });
+        await api.categorias.crear({ Nombre: nombre });
+        setFeedback({ type: 'success', text: `Categoría "${nombre}" creada.` });
       }
       setCatForm({ open: false, Nombre: '' });
       await cargarTodo();
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : 'No se pudo guardar la categoría.');
-    }
-  };
-
-  const eliminarCategoria = async (id: number) => {
-    setActionError(null);
-    try {
-      await api.categorias.eliminar(id);
-      await cargarTodo();
-    } catch (err) {
-      setActionError(err instanceof Error ? err.message : 'No se pudo eliminar la categoría.');
+      setFeedback({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'No se pudo guardar la categoría.',
+      });
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const guardarProveedor = async (e: React.FormEvent) => {
     e.preventDefault();
-    setActionError(null);
+    if (submitting) return;
+    setSubmitting(true);
+    setFeedback(null);
     try {
+      const nombre = provForm.Nombre.trim();
+      const telefono = provForm.Telefono.trim();
       if (provForm.id) {
-        await api.proveedores.actualizar(provForm.id, {
-          Nombre: provForm.Nombre.trim(),
-          Telefono: provForm.Telefono.trim(),
-        });
+        await api.proveedores.actualizar(provForm.id, { Nombre: nombre, Telefono: telefono });
+        setFeedback({ type: 'success', text: `Proveedor "${nombre}" actualizado.` });
       } else {
-        await api.proveedores.crear({
-          Nombre: provForm.Nombre.trim(),
-          Telefono: provForm.Telefono.trim(),
-        });
+        await api.proveedores.crear({ Nombre: nombre, Telefono: telefono });
+        setFeedback({ type: 'success', text: `Proveedor "${nombre}" registrado.` });
       }
       setProvForm({ open: false, Nombre: '', Telefono: '' });
       await cargarTodo();
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : 'No se pudo guardar el proveedor.');
+      setFeedback({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'No se pudo guardar el proveedor.',
+      });
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const eliminarProveedor = async (id: number) => {
-    setActionError(null);
+  const confirmarEliminacion = async () => {
+    if (!deleteTarget || submitting) return;
+    setSubmitting(true);
+    setFeedback(null);
     try {
-      await api.proveedores.eliminar(id);
+      if (deleteTarget.kind === 'producto') {
+        await api.productos.eliminar(deleteTarget.id);
+        setFeedback({ type: 'success', text: `Producto "${deleteTarget.nombre}" eliminado.` });
+        onStockChanged();
+      } else if (deleteTarget.kind === 'categoria') {
+        await api.categorias.eliminar(deleteTarget.id);
+        setFeedback({ type: 'success', text: `Categoría "${deleteTarget.nombre}" eliminada.` });
+      } else {
+        await api.proveedores.eliminar(deleteTarget.id);
+        setFeedback({ type: 'success', text: `Proveedor "${deleteTarget.nombre}" eliminado.` });
+      }
+      setDeleteTarget(null);
       await cargarTodo();
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : 'No se pudo eliminar el proveedor.');
+      setDeleteTarget(null);
+      setFeedback({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'No se pudo completar la eliminación.',
+      });
+    } finally {
+      setSubmitting(false);
     }
   };
+
+  const tabs: Array<{ id: InventarioTabId; label: string; count: number; icon: typeof Package }> = [
+    { id: 'productos', label: 'Productos', count: reporteProds.length, icon: Package },
+    { id: 'categorias', label: 'Categorías', count: categorias.length, icon: Tag },
+    { id: 'proveedores', label: 'Proveedores', count: proveedores.length, icon: Truck },
+  ];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
       <div className="view-header">
         <h1 className="view-title">Inventario y Catálogos</h1>
-        <div style={{ display: 'flex', gap: 10 }}>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <div className="segmented-control" role="tablist" aria-label="Secciones de inventario">
+            {tabs.map(({ id, label, count, icon: Icon }) => {
+              const selected = tab === id;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  role="tab"
+                  aria-selected={selected}
+                  className={`segmented-btn ${selected ? 'is-active' : ''}`}
+                  onClick={() => {
+                    setFeedback(null);
+                    setTab(id);
+                  }}
+                >
+                  {selected && (
+                    <motion.span
+                      layoutId="inv-tab-pill"
+                      transition={{ type: 'spring', stiffness: 420, damping: 32 }}
+                      className="segmented-pill"
+                    />
+                  )}
+                  <span style={{ position: 'relative', zIndex: 1, display: 'inline-flex' }}>
+                    <Icon size={14} weight={selected ? 'bold' : 'regular'} />
+                  </span>
+                  <span style={{ position: 'relative', zIndex: 1 }}>{label}</span>
+                  <span
+                    className="num-tabular"
+                    style={{ position: 'relative', zIndex: 1, opacity: selected ? 0.85 : 0.65 }}
+                  >
+                    ({count})
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
           {tab === 'productos' && (
             <button type="button" className="btn btn-pill btn-gold" onClick={abrirNuevoProducto}>
               <Plus size={14} weight="bold" />
@@ -261,7 +371,7 @@ export function InventarioView({ searchQuery, onStockChanged }: InventarioViewPr
               type="button"
               className="btn btn-pill btn-gold"
               onClick={() => {
-                setActionError(null);
+                setFeedback(null);
                 setCatForm({ open: true, Nombre: '' });
               }}
             >
@@ -274,7 +384,7 @@ export function InventarioView({ searchQuery, onStockChanged }: InventarioViewPr
               type="button"
               className="btn btn-pill btn-gold"
               onClick={() => {
-                setActionError(null);
+                setFeedback(null);
                 setProvForm({ open: true, Nombre: '', Telefono: '' });
               }}
             >
@@ -285,39 +395,48 @@ export function InventarioView({ searchQuery, onStockChanged }: InventarioViewPr
         </div>
       </div>
 
-      {/* Pestañas */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-        {(
-          [
-            ['productos', `Productos (${reporteProds.length})`],
-            ['categorias', `Categorías (${categorias.length})`],
-            ['proveedores', `Proveedores (${proveedores.length})`],
-          ] as const
-        ).map(([id, label]) => (
-          <button
-            key={id}
-            type="button"
-            className={`btn btn-pill ${tab === id ? 'btn-gold' : ''}`}
-            style={{ height: 34, fontSize: 12 }}
-            onClick={() => {
-              setActionError(null);
-              setTab(id);
-            }}
+      <AnimatePresence>
+        {feedback && (
+          <motion.div
+            key={feedback.text}
+            role="status"
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.16, ease: EASE_OUT }}
+            className={`inv-feedback-banner ${feedback.type === 'success' ? 'is-success' : 'is-error'}`}
           >
-            {label}
-          </button>
-        ))}
-      </div>
-
-      {actionError && (
-        <div className="badge badge-danger" style={{ alignSelf: 'flex-start', marginBottom: 12 }}>
-          {actionError}
-        </div>
-      )}
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              {feedback.type === 'success' ? (
+                <CheckCircle size={16} weight="fill" />
+              ) : (
+                <WarningCircle size={16} weight="fill" />
+              )}
+              {feedback.text}
+            </span>
+            <button
+              type="button"
+              className="btn-ghost"
+              style={{
+                border: 'none',
+                background: 'transparent',
+                color: 'inherit',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                padding: 4,
+              }}
+              onClick={() => setFeedback(null)}
+              aria-label="Cerrar aviso"
+            >
+              <X size={14} />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {loading ? (
         <section className="surface-card" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div className="skeleton" style={{ width: '40%', height: 30, borderRadius: 999 }} />
+          <div className="skeleton" style={{ width: '44%', height: 34, borderRadius: 999 }} />
           {[0, 1, 2, 3, 4, 5].map((idx) => (
             <div key={idx} className="skeleton" style={{ width: '100%', height: 42 }} />
           ))}
@@ -325,337 +444,81 @@ export function InventarioView({ searchQuery, onStockChanged }: InventarioViewPr
       ) : error ? (
         <ErrorCard title="Error" message={error} onRetry={() => void cargarTodo()} />
       ) : (
-        <section className="surface-card" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-          {tab === 'productos' && (
-            <>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', gap: 10 }}>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  <button
-                    type="button"
-                    className={`btn btn-pill ${filtroCat === 'Todas' ? 'btn-gold' : ''}`}
-                    style={{ height: 30, fontSize: 12 }}
-                    onClick={() => setFiltroCat('Todas')}
-                  >
-                    Todas
-                  </button>
-                  {categorias.map((c) => (
-                    <button
-                      key={c.IdCategorias}
-                      type="button"
-                      className={`btn btn-pill ${filtroCat === c.Nombre ? 'btn-gold' : ''}`}
-                      style={{ height: 30, fontSize: 12 }}
-                      onClick={() => setFiltroCat(c.Nombre)}
-                    >
-                      {c.Nombre}
-                    </button>
-                  ))}
-                </div>
-
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                  <input type="checkbox" checked={soloStockBajo} onChange={(e) => setSoloStockBajo(e.target.checked)} />
-                  Solo stock bajo (≤ 30)
-                </label>
-              </div>
-
-              {prodsFiltrados.length === 0 ? (
-                <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)' }}>
-                  No hay productos que coincidan con el filtro.
-                </div>
-              ) : (
-                <div className="scroll-area" style={{ flex: 1 }}>
-                  <table className="clean-table">
-                  <thead>
-                    <tr>
-                      <th>Producto</th>
-                      <th>Categoría</th>
-                      <th>Proveedor</th>
-                      <th>Precio</th>
-                      <th>Existencias</th>
-                      <th>Valor</th>
-                      <th style={{ textAlign: 'right' }}>Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {prodsFiltrados.map((p) => (
-                      <tr key={p.IdProducto}>
-                        <td style={{ fontWeight: 500 }}>{p.Producto}</td>
-                        <td>
-                          <span className="badge badge-neutral">{p.Categoria}</span>
-                        </td>
-                        <td style={{ color: 'var(--text-secondary)' }}>{p.Proveedor}</td>
-                        <td className="num-tabular">{formatCurrency(p.Precio)}</td>
-                        <td>
-                          <StockBadge existencias={p.Existencias} />
-                        </td>
-                        <td className="num-tabular">{formatCurrency(p.ValorTotalInventario)}</td>
-                        <td style={{ textAlign: 'right' }}>
-                          <div style={{ display: 'inline-flex', gap: 6 }}>
-                            <button
-                              type="button"
-                              className="btn"
-                              style={{ height: 28, padding: '0 10px', fontSize: 12 }}
-                              onClick={() =>
-                                setAjusteTarget({ id: p.IdProducto, nombre: p.Producto, actual: p.Existencias, delta: '10' })
-                              }
-                            >
-                              + Stock
-                            </button>
-                            <button
-                              type="button"
-                              className="btn-circle"
-                              style={{ width: 28, height: 28 }}
-                              onClick={() => abrirEditarProducto(p.IdProducto)}
-                              title="Editar"
-                            >
-                              <PencilSimple size={13} />
-                            </button>
-                            <button
-                              type="button"
-                              className="btn-circle"
-                              style={{ width: 28, height: 28, color: 'var(--status-danger)' }}
-                              onClick={() => void eliminarProducto(p.IdProducto)}
-                              title="Eliminar"
-                            >
-                              <Trash size={13} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                  </table>
-                </div>
-              )}
-            </>
-          )}
-
-          {tab === 'categorias' && (
-            <table className="clean-table">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Nombre</th>
-                  <th style={{ textAlign: 'right' }}>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {categorias.map((c) => (
-                  <tr key={c.IdCategorias}>
-                    <td className="num-tabular" style={{ color: 'var(--text-muted)' }}>
-                      #{c.IdCategorias}
-                    </td>
-                    <td style={{ fontWeight: 500 }}>{c.Nombre}</td>
-                    <td style={{ textAlign: 'right' }}>
-                      <div style={{ display: 'inline-flex', gap: 6 }}>
-                        <button
-                          type="button"
-                          className="btn-circle"
-                          style={{ width: 28, height: 28 }}
-                          onClick={() => setCatForm({ open: true, id: c.IdCategorias, Nombre: c.Nombre })}
-                        >
-                          <PencilSimple size={13} />
-                        </button>
-                        <button
-                          type="button"
-                          className="btn-circle"
-                          style={{ width: 28, height: 28, color: 'var(--status-danger)' }}
-                          onClick={() => void eliminarCategoria(c.IdCategorias)}
-                        >
-                          <Trash size={13} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-
-          {tab === 'proveedores' && (
-            <table className="clean-table">
-              <thead>
-                <tr>
-                  <th>Nombre</th>
-                  <th>Teléfono</th>
-                  <th style={{ textAlign: 'right' }}>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {proveedores.map((pr) => (
-                  <tr key={pr.IdProveedor}>
-                    <td style={{ fontWeight: 500 }}>{pr.Nombre}</td>
-                    <td className="num-tabular" style={{ color: 'var(--text-secondary)' }}>
-                      {pr.Telefono}
-                    </td>
-                    <td style={{ textAlign: 'right' }}>
-                      <div style={{ display: 'inline-flex', gap: 6 }}>
-                        <button
-                          type="button"
-                          className="btn-circle"
-                          style={{ width: 28, height: 28 }}
-                          onClick={() =>
-                            setProvForm({ open: true, id: pr.IdProveedor, Nombre: pr.Nombre, Telefono: pr.Telefono })
-                          }
-                        >
-                          <PencilSimple size={13} />
-                        </button>
-                        <button
-                          type="button"
-                          className="btn-circle"
-                          style={{ width: 28, height: 28, color: 'var(--status-danger)' }}
-                          onClick={() => void eliminarProveedor(pr.IdProveedor)}
-                        >
-                          <Trash size={13} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </section>
+        <motion.section
+          className="surface-card"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.28, ease: EASE_OUT }}
+          style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}
+        >
+          <InventarioTables
+            tab={tab}
+            prodsFiltrados={prodsFiltrados}
+            categorias={categorias}
+            proveedores={proveedores}
+            conteoPorCategoria={conteoPorCategoria}
+            conteoPorProveedor={conteoPorProveedor}
+            filtroCat={filtroCat}
+            soloStockBajo={soloStockBajo}
+            totalStockBajo={totalStockBajo}
+            onChangeFiltroCat={setFiltroCat}
+            onToggleStockBajo={() => setSoloStockBajo((v) => !v)}
+            onOpenAjuste={(p) => {
+              setFeedback(null);
+              setAjusteTarget({ id: p.IdProducto, nombre: p.Producto, actual: p.Existencias, delta: '6' });
+            }}
+            onEditProducto={abrirEditarProducto}
+            onRequestDeleteProducto={(p) =>
+              setDeleteTarget({ kind: 'producto', id: p.IdProducto, nombre: p.Producto })
+            }
+            onEditCategoria={(c) => {
+              setFeedback(null);
+              setCatForm({ open: true, id: c.IdCategorias, Nombre: c.Nombre });
+            }}
+            onRequestDeleteCategoria={(c) =>
+              setDeleteTarget({
+                kind: 'categoria',
+                id: c.IdCategorias,
+                nombre: c.Nombre,
+                relatedCount: conteoPorCategoria.get(c.Nombre) ?? 0,
+              })
+            }
+            onEditProveedor={(pr) => {
+              setFeedback(null);
+              setProvForm({ open: true, id: pr.IdProveedor, Nombre: pr.Nombre, Telefono: pr.Telefono });
+            }}
+            onRequestDeleteProveedor={(pr) =>
+              setDeleteTarget({
+                kind: 'proveedor',
+                id: pr.IdProveedor,
+                nombre: pr.Nombre,
+                relatedCount: conteoPorProveedor.get(pr.Nombre) ?? 0,
+              })
+            }
+          />
+        </motion.section>
       )}
 
-      <Modal
-        open={prodForm.open}
-        onClose={() => setProdForm((p) => ({ ...p, open: false }))}
-        title={prodForm.id ? 'Editar Producto' : 'Nuevo Producto'}
-        width={440}
-      >
-        <form onSubmit={(e) => void guardarProducto(e)} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <input
-            className="input"
-            placeholder="Nombre (máx. 30 caracteres)"
-            maxLength={30}
-            required
-            value={prodForm.Nombre}
-            onChange={(e) => setProdForm((p) => ({ ...p, Nombre: e.target.value }))}
-          />
-          <select
-            className="select"
-            value={prodForm.IdCategorias}
-            onChange={(e) => setProdForm((p) => ({ ...p, IdCategorias: Number(e.target.value) }))}
-          >
-            {categorias.map((c) => (
-              <option key={c.IdCategorias} value={c.IdCategorias}>
-                {c.Nombre}
-              </option>
-            ))}
-          </select>
-          <select
-            className="select"
-            value={prodForm.IdProveedor}
-            onChange={(e) => setProdForm((p) => ({ ...p, IdProveedor: Number(e.target.value) }))}
-          >
-            {proveedores.map((pr) => (
-              <option key={pr.IdProveedor} value={pr.IdProveedor}>
-                {pr.Nombre}
-              </option>
-            ))}
-          </select>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <input
-              type="number"
-              step="0.01"
-              min="0.01"
-              className="input num-tabular"
-              placeholder="Precio"
-              required
-              value={prodForm.Precio}
-              onChange={(e) => setProdForm((p) => ({ ...p, Precio: e.target.value }))}
-            />
-            <input
-              type="number"
-              min="0"
-              className="input num-tabular"
-              placeholder="Existencias"
-              required
-              value={prodForm.Existencias}
-              onChange={(e) => setProdForm((p) => ({ ...p, Existencias: e.target.value }))}
-            />
-          </div>
-          <button type="submit" className="btn btn-gold">
-            Guardar producto
-          </button>
-        </form>
-      </Modal>
-
-      <Modal
-        open={Boolean(ajusteTarget)}
-        onClose={() => setAjusteTarget(null)}
-        title={ajusteTarget ? `Ajustar Stock · ${ajusteTarget.nombre}` : 'Ajustar Stock'}
-        width={380}
-      >
-        {ajusteTarget && (
-          <form onSubmit={(e) => void aplicarAjuste(e)} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-              Existencias actuales: <strong className="num-tabular">{ajusteTarget.actual} uds</strong>. Usa valores positivos para entrada o negativos para merma.
-            </div>
-            <input
-              type="number"
-              className="input num-tabular"
-              required
-              value={ajusteTarget.delta}
-              onChange={(e) => setAjusteTarget((prev) => (prev ? { ...prev, delta: e.target.value } : null))}
-            />
-            <button type="submit" className="btn btn-gold">
-              Aplicar ajuste
-            </button>
-          </form>
-        )}
-      </Modal>
-
-      <Modal
-        open={catForm.open}
-        onClose={() => setCatForm({ open: false, Nombre: '' })}
-        title={catForm.id ? 'Editar Categoría' : 'Nueva Categoría'}
-        width={380}
-      >
-        <form onSubmit={(e) => void guardarCategoria(e)} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <input
-            className="input"
-            placeholder="Nombre de categoría"
-            maxLength={50}
-            required
-            value={catForm.Nombre}
-            onChange={(e) => setCatForm((p) => ({ ...p, Nombre: e.target.value }))}
-          />
-          <button type="submit" className="btn btn-gold">
-            Guardar
-          </button>
-        </form>
-      </Modal>
-
-      <Modal
-        open={provForm.open}
-        onClose={() => setProvForm({ open: false, Nombre: '', Telefono: '' })}
-        title={provForm.id ? 'Editar Proveedor' : 'Nuevo Proveedor'}
-        width={400}
-      >
-        <form onSubmit={(e) => void guardarProveedor(e)} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <input
-            className="input"
-            placeholder="Nombre del proveedor"
-            maxLength={30}
-            required
-            value={provForm.Nombre}
-            onChange={(e) => setProvForm((p) => ({ ...p, Nombre: e.target.value }))}
-          />
-          <input
-            className="input num-tabular"
-            placeholder="Teléfono (10 dígitos)"
-            pattern="\d{10}"
-            maxLength={10}
-            required
-            value={provForm.Telefono}
-            onChange={(e) => setProvForm((p) => ({ ...p, Telefono: e.target.value }))}
-          />
-          <button type="submit" className="btn btn-gold">
-            Guardar
-          </button>
-        </form>
-      </Modal>
+      <InventarioModals
+        categorias={categorias}
+        proveedores={proveedores}
+        submitting={submitting}
+        prodForm={prodForm}
+        setProdForm={setProdForm}
+        onSubmitProducto={(e) => void guardarProducto(e)}
+        ajusteTarget={ajusteTarget}
+        setAjusteTarget={setAjusteTarget}
+        onSubmitAjuste={(e) => void aplicarAjuste(e)}
+        catForm={catForm}
+        setCatForm={setCatForm}
+        onSubmitCategoria={(e) => void guardarCategoria(e)}
+        provForm={provForm}
+        setProvForm={setProvForm}
+        onSubmitProveedor={(e) => void guardarProveedor(e)}
+        deleteTarget={deleteTarget}
+        onCloseDelete={() => setDeleteTarget(null)}
+        onConfirmDelete={() => void confirmarEliminacion()}
+      />
     </div>
   );
 }
