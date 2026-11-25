@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { ArrowRight, ArrowsClockwise, DotsThree, Package, TrendUp } from '@phosphor-icons/react';
+import { ArrowRight, ArrowsClockwise, Package, TrendUp } from '@phosphor-icons/react';
 import { CategoryIcon } from './CategoryIcon.tsx';
 import { api } from '../services/api.ts';
 import type { ProductoStockBajo, ReporteProducto, VentaResumen, VistaId } from '../types/alcohontrol.ts';
@@ -24,23 +24,6 @@ interface Coord {
 
 const CATEGORY_COLORS = ['#e5a93b', '#38bdf8', '#a855f7', '#22c55e'];
 const EASE_OUT = [0.23, 1, 0.32, 1] as const;
-
-function sampleCoords(coords: Coord[], sampleCount = 28): Coord[] {
-  if (coords.length === 0) return [];
-  if (coords.length === 1) return Array.from({ length: sampleCount }, () => coords[0]);
-  const result: Coord[] = [];
-  for (let i = 0; i < sampleCount; i++) {
-    const t = (i / (sampleCount - 1)) * (coords.length - 1);
-    const lo = Math.floor(t);
-    const hi = Math.min(coords.length - 1, lo + 1);
-    const frac = t - lo;
-    result.push({
-      x: Number((coords[lo].x + (coords[hi].x - coords[lo].x) * frac).toFixed(2)),
-      y: Number((coords[lo].y + (coords[hi].y - coords[lo].y) * frac).toFixed(2)),
-    });
-  }
-  return result;
-}
 
 function buildSmoothPath(coords: Coord[]): string {
   if (coords.length === 0) return '';
@@ -218,28 +201,26 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
     y: Number((padT + plotH - (p.previo / maxVal) * plotH).toFixed(2)),
   }));
 
-  const sampledActual = sampleCoords(actualCoords, 28);
-  const sampledPrev = sampleCoords(prevCoords, 28);
-  const actualPath = buildSmoothPath(sampledActual);
-  const prevPath = buildSmoothPath(sampledPrev);
+  const actualPath = buildSmoothPath(actualCoords);
+  const prevPath = buildSmoothPath(prevCoords);
   const areaPath =
-    sampledActual.length > 1
-      ? `${actualPath} L ${sampledActual[sampledActual.length - 1].x} ${padT + plotH} L ${sampledActual[0].x} ${padT + plotH} Z`
+    actualCoords.length > 1
+      ? `${actualPath} L ${actualCoords[actualCoords.length - 1].x} ${padT + plotH} L ${actualCoords[0].x} ${padT + plotH} Z`
       : '';
 
   const activeCoord = activeIndex !== null ? actualCoords[activeIndex] : undefined;
   const activePoint = activeIndex !== null ? chartSeries[activeIndex] : undefined;
 
-  // Etiquetas de eje X espaciadas sin traslapes (máx. ~7 etiquetas)
-  const tickStep = Math.max(1, Math.ceil(chartSeries.length / 7));
-  const minGapToEnd = Math.max(2, Math.floor(tickStep * 0.7));
+  // Etiquetas de eje X uniformes ancladas al día actual
   const visibleTicks = new Set<number>();
-  for (let i = 0; i < chartSeries.length; i += tickStep) {
-    if (i < chartSeries.length - 1 && chartSeries.length - 1 - i < minGapToEnd) continue;
-    visibleTicks.add(i);
-  }
-  if (chartSeries.length > 0) {
-    visibleTicks.add(chartSeries.length - 1);
+  if (rangoDias <= 14) {
+    for (let i = 0; i < chartSeries.length; i++) {
+      visibleTicks.add(i);
+    }
+  } else {
+    for (let i = chartSeries.length - 1; i >= 0; i -= 2) {
+      visibleTicks.add(i);
+    }
   }
 
   // Geometría SVG para Gauge semicircular
@@ -272,29 +253,26 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
       <div className="view-header">
         <h1 className="view-title">Resumen Operativo</h1>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span className="badge badge-neutral" style={{ gap: 6 }}>
-            <span
-              style={{
-                width: 7,
-                height: 7,
-                borderRadius: '999px',
-                background: 'var(--status-ok)',
-                boxShadow: '0 0 8px var(--status-ok)',
-              }}
-            />
-            En línea · SQL Server
-          </span>
-          <button
-            type="button"
-            className="btn btn-pill"
-            style={{ height: 34, padding: '0 14px', fontSize: 12 }}
-            onClick={() => void cargarDatos()}
-          >
-            <ArrowsClockwise size={14} />
-            Actualizar
-          </button>
-        </div>
+        <span
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 7,
+            fontSize: 12,
+            color: 'var(--text-muted)',
+          }}
+        >
+          <span
+            style={{
+              width: 6,
+              height: 6,
+              borderRadius: '999px',
+              background: 'var(--status-ok)',
+              boxShadow: '0 0 6px var(--status-ok)',
+            }}
+          />
+          En línea
+        </span>
       </div>
 
       <div className="dashboard-grid">
@@ -407,40 +385,38 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
                   );
                 })}
 
-                {prevPath && (
-                  <motion.path
-                    d={prevPath}
-                    animate={{ d: prevPath }}
-                    transition={{ duration: 0.45, ease: EASE_OUT }}
-                    fill="none"
-                    stroke="#94a3b8"
-                    strokeOpacity="0.4"
-                    strokeWidth="1.5"
-                    strokeDasharray="4 4"
-                  />
-                )}
+                <motion.g
+                  key={rangoDias}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, ease: EASE_OUT }}
+                >
+                  {prevPath && (
+                    <path
+                      d={prevPath}
+                      fill="none"
+                      stroke="#94a3b8"
+                      strokeOpacity="0.4"
+                      strokeWidth="1.5"
+                      strokeDasharray="4 4"
+                    />
+                  )}
 
-                {areaPath && (
-                  <motion.path
-                    d={areaPath}
-                    animate={{ d: areaPath }}
-                    transition={{ duration: 0.45, ease: EASE_OUT }}
-                    fill="url(#goldAreaGrad)"
-                  />
-                )}
+                  {areaPath && <path d={areaPath} fill="url(#goldAreaGrad)" />}
 
-                {actualPath && (
-                  <motion.path
-                    d={actualPath}
-                    initial={{ pathLength: 0, opacity: 0.4 }}
-                    animate={{ d: actualPath, pathLength: 1, opacity: 1 }}
-                    transition={{ duration: 0.5, ease: EASE_OUT }}
-                    fill="none"
-                    stroke="#e5a93b"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                  />
-                )}
+                  {actualPath && (
+                    <motion.path
+                      d={actualPath}
+                      initial={{ pathLength: 0 }}
+                      animate={{ pathLength: 1 }}
+                      transition={{ duration: 0.55, ease: EASE_OUT }}
+                      fill="none"
+                      stroke="#e5a93b"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                    />
+                  )}
+                </motion.g>
 
                 {activeCoord && activePoint && (
                   <g>
@@ -467,13 +443,19 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
                   const showLabel = visibleTicks.has(idx);
                   return (
                     <g key={`${rangoDias}-${pt.label}`}>
+                      <circle
+                        cx={actualCoords[idx].x}
+                        cy={padT + plotH}
+                        r={showLabel ? 2 : 1.25}
+                        fill={idx === activeIndex ? '#e5a93b' : 'rgba(148, 163, 184, 0.28)'}
+                      />
                       {showLabel && (
                         <text
                           x={actualCoords[idx].x}
                           y={svgH - 6}
                           textAnchor="middle"
                           fill={idx === activeIndex ? '#e5a93b' : '#64748b'}
-                          fontSize="11"
+                          fontSize={rangoDias === 7 ? '11' : '10'}
                         >
                           {pt.label}
                         </text>
@@ -579,28 +561,25 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
               style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 14, minHeight: 0 }}
             >
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div
-                      style={{
-                        width: 34,
-                        height: 34,
-                        borderRadius: 'var(--radius-xl)',
-                        background: 'var(--bg-elevated)',
-                        border: '1px solid var(--border-subtle)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: 'var(--accent-gold)',
-                      }}
-                    >
-                      <Package size={17} weight="duotone" />
-                    </div>
-                    <span style={{ fontSize: 14, color: 'var(--text-secondary)', fontWeight: 500 }}>
-                      Valor de Inventario
-                    </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                  <div
+                    style={{
+                      width: 34,
+                      height: 34,
+                      borderRadius: 'var(--radius-xl)',
+                      background: 'var(--bg-elevated)',
+                      border: '1px solid var(--border-subtle)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'var(--accent-gold)',
+                    }}
+                  >
+                    <Package size={17} weight="duotone" />
                   </div>
-                  <DotsThree size={20} color="var(--text-muted)" />
+                  <span style={{ fontSize: 14, color: 'var(--text-secondary)', fontWeight: 500 }}>
+                    Valor de Inventario
+                  </span>
                 </div>
 
                 <div className="hero-metric" style={{ fontSize: 30, fontWeight: 600 }}>
@@ -786,29 +765,6 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
                   transition={{ duration: 0.85, ease: EASE_OUT }}
                 />
               </svg>
-
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'center',
-                  gap: 10,
-                  marginTop: 8,
-                  flexWrap: 'wrap',
-                }}
-              >
-                <span className="badge badge-neutral num-tabular" style={{ fontSize: 11 }}>
-                  <span style={{ width: 6, height: 6, borderRadius: 999, background: 'var(--status-ok)' }} />
-                  Óptimo {stockCounts.optimo}
-                </span>
-                <span className="badge badge-neutral num-tabular" style={{ fontSize: 11 }}>
-                  <span style={{ width: 6, height: 6, borderRadius: 999, background: 'var(--status-warn)' }} />
-                  Bajo {stockCounts.bajo}
-                </span>
-                <span className="badge badge-neutral num-tabular" style={{ fontSize: 11 }}>
-                  <span style={{ width: 6, height: 6, borderRadius: 999, background: 'var(--status-danger)' }} />
-                  Agotado {stockCounts.agotado}
-                </span>
-              </div>
             </div>
           </div>
 

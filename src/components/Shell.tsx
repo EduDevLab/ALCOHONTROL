@@ -142,7 +142,7 @@ export function Shell({
               className="btn-circle"
               onClick={() => setAlertsOpen((prev) => !prev)}
               aria-label="Alertas de stock bajo"
-              title="Productos con stock bajo (≤ 30)"
+              title="Productos con stock bajo"
             >
               <Bell size={17} />
               {stockBajo.length > 0 && <span className="alerts-dot" />}
@@ -178,7 +178,7 @@ export function Shell({
                         justifyContent: 'space-between',
                       }}
                     >
-                      <span style={{ fontWeight: 600, fontSize: 13 }}>Stock bajo (≤ 30)</span>
+                      <span style={{ fontWeight: 600, fontSize: 13 }}>Stock bajo</span>
                       <span className="badge badge-warn num-tabular">{stockBajo.length}</span>
                     </div>
 

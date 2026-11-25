@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ArrowsClockwise, PencilSimple, Plus, Trash, X } from '@phosphor-icons/react';
+import { PencilSimple, Plus, Trash, X } from '@phosphor-icons/react';
 import { api } from '../services/api.ts';
 import type { Categoria, Producto, Proveedor, ReporteProducto } from '../types/alcohontrol.ts';
 import { formatCurrency } from '../utils/format.ts';
@@ -247,10 +247,6 @@ export function InventarioView({ searchQuery, onStockChanged }: InventarioViewPr
       <div className="view-header">
         <h1 className="view-title">Inventario y Catálogos</h1>
         <div style={{ display: 'flex', gap: 10 }}>
-          <button type="button" className="btn btn-pill" onClick={() => void cargarTodo()}>
-            <ArrowsClockwise size={14} />
-            Recargar
-          </button>
           {tab === 'productos' && (
             <button type="button" className="btn btn-pill btn-gold" onClick={abrirNuevoProducto}>
               <Plus size={14} weight="bold" />

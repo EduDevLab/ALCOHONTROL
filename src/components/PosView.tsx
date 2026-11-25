@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ArrowsClockwise,
   CheckCircle,
   Minus,
   Plus,
@@ -166,13 +165,7 @@ export function PosView({ empleado, searchQuery, onVentaCompletada }: PosViewPro
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
       <div className="view-header">
         <h1 className="view-title">Punto de Venta</h1>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span className="badge badge-neutral">Caja: {empleado.Nombre}</span>
-          <button type="button" className="btn btn-pill" onClick={() => void cargarCatalogo()}>
-            <ArrowsClockwise size={14} />
-            Actualizar stock
-          </button>
-        </div>
+        <span className="badge badge-neutral">Caja: {empleado.Nombre}</span>
       </div>
 
       {loading ? (

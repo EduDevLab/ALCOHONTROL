@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ArrowsClockwise,
   Check,
   FloppyDisk,
   PencilSimple,
@@ -211,23 +210,17 @@ export function CroquisView({ searchQuery, onStockChanged }: CroquisViewProps) {
               </button>
             </>
           ) : (
-            <>
-              <button type="button" className="btn btn-pill" onClick={() => void cargarCroquis()}>
-                <ArrowsClockwise size={14} />
-                En vivo
-              </button>
-              <button
-                type="button"
-                className="btn btn-pill"
-                onClick={() => {
-                  setMensaje(null);
-                  setModoEdicion(true);
-                }}
-              >
-                <PencilSimple size={14} />
-                Editar croquis
-              </button>
-            </>
+            <button
+              type="button"
+              className="btn btn-pill"
+              onClick={() => {
+                setMensaje(null);
+                setModoEdicion(true);
+              }}
+            >
+              <PencilSimple size={14} />
+              Editar croquis
+            </button>
           )}
         </div>
       </div>

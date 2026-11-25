@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import { ArrowsClockwise, DownloadSimple, Eye, Printer, X } from '@phosphor-icons/react';
+import { useEffect, useState } from 'react';
+import { DownloadSimple, Eye, Printer, X } from '@phosphor-icons/react';
 import { api } from '../services/api.ts';
 import type { CorteVentas, DetalleVentaItem, TipoCorte } from '../types/alcohontrol.ts';
 import { formatCurrency, formatDateShort, getTodayIso } from '../utils/format.ts';
@@ -12,19 +12,6 @@ export function CortesView() {
   const [error, setError] = useState<string | null>(null);
 
   const [detalleModal, setDetalleModal] = useState<{ idVenta: number; items: DetalleVentaItem[] } | null>(null);
-
-  const cargarCorte = useCallback(async (t: TipoCorte, f: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await api.reportes.corte({ tipo: t, fecha: f });
-      setCorte(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al generar el corte.');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -101,9 +88,6 @@ export function CortesView() {
             value={fecha}
             onChange={(e) => setFecha(e.target.value)}
           />
-          <button type="button" className="btn btn-pill" style={{ height: 34 }} onClick={() => void cargarCorte(tipo, fecha)}>
-            <ArrowsClockwise size={14} />
-          </button>
           <button type="button" className="btn btn-pill" style={{ height: 34 }} onClick={exportarCsv} disabled={!corte}>
             <DownloadSimple size={14} />
             CSV
