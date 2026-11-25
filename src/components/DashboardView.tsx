@@ -25,36 +25,17 @@ interface Coord {
 const CATEGORY_COLORS = ['#e5a93b', '#38bdf8', '#a855f7', '#22c55e'];
 const EASE_OUT = [0.23, 1, 0.32, 1] as const;
 
-function buildMorphableSmoothPath(coords: Coord[], sampleCount = 64): string {
+function buildSmoothPath(coords: Coord[]): string {
   if (coords.length === 0) return '';
   if (coords.length === 1) return `M ${coords[0].x} ${coords[0].y}`;
-
-  const points: Coord[] = [];
-  for (let k = 0; k < sampleCount; k++) {
-    const segFloat = (k / (sampleCount - 1)) * (coords.length - 1);
-    const segIdx = Math.min(coords.length - 2, Math.floor(segFloat));
-    const u = segFloat - segIdx;
-    const omt = 1 - u;
-
-    const p0 = coords[segIdx];
-    const p1 = coords[segIdx + 1];
-    const cx = (p0.x + p1.x) / 2;
-
-    const bx =
-      omt * omt * omt * p0.x +
-      3 * omt * omt * u * cx +
-      3 * omt * u * u * cx +
-      u * u * u * p1.x;
-    const by =
-      omt * omt * omt * p0.y +
-      3 * omt * omt * u * p0.y +
-      3 * omt * u * u * p1.y +
-      u * u * u * p1.y;
-
-    points.push({ x: Number(bx.toFixed(2)), y: Number(by.toFixed(2)) });
+  let d = `M ${coords[0].x} ${coords[0].y}`;
+  for (let i = 0; i < coords.length - 1; i++) {
+    const p0 = coords[i];
+    const p1 = coords[i + 1];
+    const cx = Number(((p0.x + p1.x) / 2).toFixed(2));
+    d += ` C ${cx} ${p0.y}, ${cx} ${p1.y}, ${p1.x} ${p1.y}`;
   }
-
-  return points.map((pt, i) => `${i === 0 ? 'M' : 'L'} ${pt.x} ${pt.y}`).join(' ');
+  return d;
 }
 
 export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
@@ -64,6 +45,7 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [rangoDias, setRangoDias] = useState<7 | 14 | 30>(7);
+  const [zoomScaleX, setZoomScaleX] = useState(1);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [todayIso] = useState(() => getTodayIso());
 
@@ -223,8 +205,8 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
     y: Number((padT + plotH - (p.previo / maxVal) * plotH).toFixed(2)),
   }));
 
-  const actualPath = buildMorphableSmoothPath(actualCoords);
-  const prevPath = buildMorphableSmoothPath(prevCoords);
+  const actualPath = buildSmoothPath(actualCoords);
+  const prevPath = buildSmoothPath(prevCoords);
   const areaPath =
     actualCoords.length > 1
       ? `${actualPath} L ${actualCoords[actualCoords.length - 1].x} ${padT + plotH} L ${actualCoords[0].x} ${padT + plotH} Z`
@@ -329,8 +311,11 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
                       key={dias}
                       type="button"
                       onClick={() => {
-                        setRangoDias(dias);
-                        setActiveIndex(null);
+                        if (dias !== rangoDias) {
+                          setZoomScaleX(dias > rangoDias ? 1.32 : 0.74);
+                          setRangoDias(dias);
+                          setActiveIndex(null);
+                        }
                       }}
                       style={{
                         position: 'relative',
@@ -409,40 +394,36 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
                   );
                 })}
 
-                {prevPath && (
-                  <motion.path
-                    d={prevPath}
-                    animate={{ d: prevPath }}
-                    transition={{ duration: 0.48, ease: EASE_OUT }}
-                    fill="none"
-                    stroke="#94a3b8"
-                    strokeOpacity="0.4"
-                    strokeWidth="1.5"
-                    strokeDasharray="4 4"
-                  />
-                )}
+                <motion.g
+                  key={rangoDias}
+                  initial={{ opacity: 0, scaleX: zoomScaleX, scaleY: 0.94 }}
+                  animate={{ opacity: 1, scaleX: 1, scaleY: 1 }}
+                  transition={{ duration: 0.36, ease: EASE_OUT }}
+                  style={{ transformOrigin: `${svgW - padR}px ${padT + plotH}px` }}
+                >
+                  {prevPath && (
+                    <path
+                      d={prevPath}
+                      fill="none"
+                      stroke="#94a3b8"
+                      strokeOpacity="0.4"
+                      strokeWidth="1.5"
+                      strokeDasharray="4 4"
+                    />
+                  )}
 
-                {areaPath && (
-                  <motion.path
-                    d={areaPath}
-                    animate={{ d: areaPath }}
-                    transition={{ duration: 0.48, ease: EASE_OUT }}
-                    fill="url(#goldAreaGrad)"
-                  />
-                )}
+                  {areaPath && <path d={areaPath} fill="url(#goldAreaGrad)" />}
 
-                {actualPath && (
-                  <motion.path
-                    d={actualPath}
-                    initial={{ pathLength: 0 }}
-                    animate={{ d: actualPath, pathLength: 1 }}
-                    transition={{ duration: 0.48, ease: EASE_OUT }}
-                    fill="none"
-                    stroke="#e5a93b"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                  />
-                )}
+                  {actualPath && (
+                    <path
+                      d={actualPath}
+                      fill="none"
+                      stroke="#e5a93b"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                    />
+                  )}
+                </motion.g>
 
                 {activeCoord && activePoint && (
                   <g>
@@ -603,15 +584,14 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
                   aria-label="Distribución de inventario por categoría"
                 >
                   {distribucionCategorias.map((cat) => (
-                    <motion.div
+                    <div
                       key={cat.nombre}
-                      initial={{ width: 0 }}
-                      animate={{ width: `${Math.max(4, cat.pct)}%` }}
-                      transition={{ duration: 0.65, ease: EASE_OUT }}
                       style={{
+                        width: `${Math.max(4, cat.pct)}%`,
                         height: '100%',
                         borderRadius: 999,
                         background: cat.color,
+                        transition: 'width 400ms var(--ease-out)',
                       }}
                       title={`${cat.nombre}: ${formatCurrency(cat.valor)} (${cat.pct}%)`}
                     />
@@ -726,9 +706,6 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
                     <stop offset="0%" stopColor="#e5a93b" />
                     <stop offset="100%" stopColor="#f0b94e" />
                   </linearGradient>
-                  <filter id="arcGlow" x="-20%" y="-20%" width="140%" height="140%">
-                    <feGaussianBlur stdDeviation="5" result="blur" />
-                  </filter>
                 </defs>
 
                 <path
@@ -739,31 +716,16 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
                   strokeLinecap="round"
                 />
 
-                {/* Resplandor suave siguiendo exactamente el arco activo */}
-                <motion.path
-                  d="M 18 112 A 92 92 0 0 1 202 112"
-                  fill="none"
-                  stroke="#e5a93b"
-                  strokeOpacity="0.32"
-                  strokeWidth="22"
-                  strokeLinecap="round"
-                  strokeDasharray={gaugeCircumference}
-                  initial={{ strokeDashoffset: gaugeCircumference }}
-                  animate={{ strokeDashoffset: gaugeDashOffset }}
-                  transition={{ duration: 0.85, ease: EASE_OUT }}
-                  filter="url(#arcGlow)"
-                />
-
-                <motion.path
+                <path
                   d="M 18 112 A 92 92 0 0 1 202 112"
                   fill="none"
                   stroke="url(#gaugeGoldGrad)"
                   strokeWidth="20"
                   strokeLinecap="round"
                   strokeDasharray={gaugeCircumference}
-                  initial={{ strokeDashoffset: gaugeCircumference }}
-                  animate={{ strokeDashoffset: gaugeDashOffset }}
-                  transition={{ duration: 0.85, ease: EASE_OUT }}
+                  strokeDashoffset={gaugeDashOffset}
+                  className="gauge-arc-animated"
+                  style={{ filter: 'drop-shadow(0 0 8px rgba(229, 169, 59, 0.28))' }}
                 />
               </svg>
             </div>
@@ -785,10 +747,8 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
                 {filteredStockBajo.map((item) => {
                   const agotado = item.Existencias === 0;
                   return (
-                    <motion.div
+                    <div
                       key={item.IdProducto}
-                      whileHover={{ x: 3 }}
-                      transition={{ duration: 0.15, ease: EASE_OUT }}
                       style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
@@ -839,7 +799,7 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
                           {formatCurrency(item.Precio)}
                         </div>
                       </div>
-                    </motion.div>
+                    </div>
                   );
                 })}
               </div>
