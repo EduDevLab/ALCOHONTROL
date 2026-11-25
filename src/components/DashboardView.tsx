@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { ArrowRight, ArrowsClockwise, Package, TrendUp } from '@phosphor-icons/react';
+import { ArrowRight, ArrowsClockwise, TrendUp } from '@phosphor-icons/react';
 import { CategoryIcon } from './CategoryIcon.tsx';
 import { api } from '../services/api.ts';
 import type { ProductoStockBajo, ReporteProducto, VentaResumen, VistaId } from '../types/alcohontrol.ts';
@@ -25,17 +25,36 @@ interface Coord {
 const CATEGORY_COLORS = ['#e5a93b', '#38bdf8', '#a855f7', '#22c55e'];
 const EASE_OUT = [0.23, 1, 0.32, 1] as const;
 
-function buildSmoothPath(coords: Coord[]): string {
+function buildMorphableSmoothPath(coords: Coord[], sampleCount = 64): string {
   if (coords.length === 0) return '';
   if (coords.length === 1) return `M ${coords[0].x} ${coords[0].y}`;
-  let d = `M ${coords[0].x} ${coords[0].y}`;
-  for (let i = 0; i < coords.length - 1; i++) {
-    const p0 = coords[i];
-    const p1 = coords[i + 1];
-    const cx = Number(((p0.x + p1.x) / 2).toFixed(2));
-    d += ` C ${cx} ${p0.y}, ${cx} ${p1.y}, ${p1.x} ${p1.y}`;
+
+  const points: Coord[] = [];
+  for (let k = 0; k < sampleCount; k++) {
+    const segFloat = (k / (sampleCount - 1)) * (coords.length - 1);
+    const segIdx = Math.min(coords.length - 2, Math.floor(segFloat));
+    const u = segFloat - segIdx;
+    const omt = 1 - u;
+
+    const p0 = coords[segIdx];
+    const p1 = coords[segIdx + 1];
+    const cx = (p0.x + p1.x) / 2;
+
+    const bx =
+      omt * omt * omt * p0.x +
+      3 * omt * omt * u * cx +
+      3 * omt * u * u * cx +
+      u * u * u * p1.x;
+    const by =
+      omt * omt * omt * p0.y +
+      3 * omt * omt * u * p0.y +
+      3 * omt * u * u * p1.y +
+      u * u * u * p1.y;
+
+    points.push({ x: Number(bx.toFixed(2)), y: Number(by.toFixed(2)) });
   }
-  return d;
+
+  return points.map((pt, i) => `${i === 0 ? 'M' : 'L'} ${pt.x} ${pt.y}`).join(' ');
 }
 
 export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
@@ -148,7 +167,10 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
       prevD.setUTCDate(d.getUTCDate() - rangoDias);
       const prevIso = prevD.toISOString().slice(0, 10);
 
-      const label = d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', timeZone: 'UTC' });
+      const label = d
+        .toLocaleDateString('es-MX', { day: '2-digit', month: 'short', timeZone: 'UTC' })
+        .replace('.', '')
+        .replace('-', ' ');
       points.push({
         label,
         actual: totalsByDate.get(iso) ?? 0,
@@ -201,8 +223,8 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
     y: Number((padT + plotH - (p.previo / maxVal) * plotH).toFixed(2)),
   }));
 
-  const actualPath = buildSmoothPath(actualCoords);
-  const prevPath = buildSmoothPath(prevCoords);
+  const actualPath = buildMorphableSmoothPath(actualCoords);
+  const prevPath = buildMorphableSmoothPath(prevCoords);
   const areaPath =
     actualCoords.length > 1
       ? `${actualPath} L ${actualCoords[actualCoords.length - 1].x} ${padT + plotH} L ${actualCoords[0].x} ${padT + plotH} Z`
@@ -211,16 +233,18 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
   const activeCoord = activeIndex !== null ? actualCoords[activeIndex] : undefined;
   const activePoint = activeIndex !== null ? chartSeries[activeIndex] : undefined;
 
-  // Etiquetas de eje X uniformes ancladas al día actual
+  // Etiquetas de referencia espaciadas sin saturar el eje X
   const visibleTicks = new Set<number>();
-  if (rangoDias <= 14) {
-    for (let i = 0; i < chartSeries.length; i++) {
-      visibleTicks.add(i);
-    }
+  if (rangoDias <= 7) {
+    for (let i = 0; i < chartSeries.length; i++) visibleTicks.add(i);
+  } else if (rangoDias <= 14) {
+    [0, 3, 6, 9, 13].forEach((i) => {
+      if (i < chartSeries.length) visibleTicks.add(i);
+    });
   } else {
-    for (let i = chartSeries.length - 1; i >= 0; i -= 2) {
-      visibleTicks.add(i);
-    }
+    [0, 6, 12, 18, 24, 29].forEach((i) => {
+      if (i < chartSeries.length) visibleTicks.add(i);
+    });
   }
 
   // Geometría SVG para Gauge semicircular
@@ -385,38 +409,40 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
                   );
                 })}
 
-                <motion.g
-                  key={rangoDias}
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, ease: EASE_OUT }}
-                >
-                  {prevPath && (
-                    <path
-                      d={prevPath}
-                      fill="none"
-                      stroke="#94a3b8"
-                      strokeOpacity="0.4"
-                      strokeWidth="1.5"
-                      strokeDasharray="4 4"
-                    />
-                  )}
+                {prevPath && (
+                  <motion.path
+                    d={prevPath}
+                    animate={{ d: prevPath }}
+                    transition={{ duration: 0.48, ease: EASE_OUT }}
+                    fill="none"
+                    stroke="#94a3b8"
+                    strokeOpacity="0.4"
+                    strokeWidth="1.5"
+                    strokeDasharray="4 4"
+                  />
+                )}
 
-                  {areaPath && <path d={areaPath} fill="url(#goldAreaGrad)" />}
+                {areaPath && (
+                  <motion.path
+                    d={areaPath}
+                    animate={{ d: areaPath }}
+                    transition={{ duration: 0.48, ease: EASE_OUT }}
+                    fill="url(#goldAreaGrad)"
+                  />
+                )}
 
-                  {actualPath && (
-                    <motion.path
-                      d={actualPath}
-                      initial={{ pathLength: 0 }}
-                      animate={{ pathLength: 1 }}
-                      transition={{ duration: 0.55, ease: EASE_OUT }}
-                      fill="none"
-                      stroke="#e5a93b"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                    />
-                  )}
-                </motion.g>
+                {actualPath && (
+                  <motion.path
+                    d={actualPath}
+                    initial={{ pathLength: 0 }}
+                    animate={{ d: actualPath, pathLength: 1 }}
+                    transition={{ duration: 0.48, ease: EASE_OUT }}
+                    fill="none"
+                    stroke="#e5a93b"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                  />
+                )}
 
                 {activeCoord && activePoint && (
                   <g>
@@ -433,7 +459,7 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
                       cy={activeCoord.y}
                       r="5"
                       fill="#e5a93b"
-                      stroke="#070d1a"
+                      stroke="var(--bg-canvas)"
                       strokeWidth="2"
                     />
                   </g>
@@ -443,19 +469,13 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
                   const showLabel = visibleTicks.has(idx);
                   return (
                     <g key={`${rangoDias}-${pt.label}`}>
-                      <circle
-                        cx={actualCoords[idx].x}
-                        cy={padT + plotH}
-                        r={showLabel ? 2 : 1.25}
-                        fill={idx === activeIndex ? '#e5a93b' : 'rgba(148, 163, 184, 0.28)'}
-                      />
                       {showLabel && (
                         <text
                           x={actualCoords[idx].x}
                           y={svgH - 6}
                           textAnchor="middle"
                           fill={idx === activeIndex ? '#e5a93b' : '#64748b'}
-                          fontSize={rangoDias === 7 ? '11' : '10'}
+                          fontSize="11"
                         >
                           {pt.label}
                         </text>
@@ -561,26 +581,7 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
               style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 14, minHeight: 0 }}
             >
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                  <div
-                    style={{
-                      width: 34,
-                      height: 34,
-                      borderRadius: 'var(--radius-xl)',
-                      background: 'var(--bg-elevated)',
-                      border: '1px solid var(--border-subtle)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: 'var(--accent-gold)',
-                    }}
-                  >
-                    <Package size={17} weight="duotone" />
-                  </div>
-                  <span style={{ fontSize: 14, color: 'var(--text-secondary)', fontWeight: 500 }}>
-                    Valor de Inventario
-                  </span>
-                </div>
+                <h2 style={{ margin: '0 0 12px', fontSize: 16, fontWeight: 600 }}>Valor de Inventario</h2>
 
                 <div className="hero-metric" style={{ fontSize: 30, fontWeight: 600 }}>
                   {formatCurrency(valorTotalInventario)}
@@ -702,7 +703,7 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
             <div
               style={{
                 background:
-                  'radial-gradient(circle at 50% 72%, rgba(229, 169, 59, 0.14) 0%, rgba(16, 27, 51, 0.35) 55%, rgba(7, 13, 26, 0.55) 100%)',
+                  'radial-gradient(circle at 50% 72%, rgba(229, 169, 59, 0.12) 0%, rgba(23, 26, 34, 0.4) 55%, rgba(8, 9, 12, 0.65) 100%)',
                 border: '1px solid var(--border-subtle)',
                 borderRadius: 'var(--radius-xl)',
                 padding: '18px 16px 14px',
@@ -733,7 +734,7 @@ export function DashboardView({ searchQuery, onNavigate }: DashboardViewProps) {
                 <path
                   d="M 18 112 A 92 92 0 0 1 202 112"
                   fill="none"
-                  stroke="#101b33"
+                  stroke="var(--bg-elevated)"
                   strokeWidth="20"
                   strokeLinecap="round"
                 />
