@@ -1288,3 +1288,78 @@ body,
   background: #dc2626;
   border-color: #dc2626;
 }
+
+.badge-gold {
+  background: rgba(229, 169, 59, 0.14);
+  color: var(--accent-gold);
+  border: 1px solid rgba(229, 169, 59, 0.3);
+}
+
+/* ============================================================================
+   CORTES Y REPORTES — DATE PILL, BREAKDOWN BARS & PRINT
+   ============================================================================ */
+
+.cortes-date-pill {
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  transition: border-color 150ms ease;
+}
+
+.cortes-date-pill:focus-within {
+  border-color: var(--accent-gold);
+}
+
+.cortes-date-pill input[type='date'] {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color-scheme: dark;
+  cursor: pointer;
+}
+
+.cortes-share-track {
+  width: 100%;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+.cortes-share-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #b88224 0%, var(--accent-gold) 100%);
+}
+
+@media print {
+  .app-sidebar,
+  .app-topbar,
+  .app-ambient-glow,
+  .inv-row-actions,
+  .no-print {
+    display: none !important;
+  }
+
+  .app-shell,
+  .app-main,
+  .scroll-area {
+    height: auto !important;
+    overflow: visible !important;
+    display: block !important;
+  }
+
+  .surface-card {
+    box-shadow: none !important;
+    border-color: #d1d5db !important;
+  }
+}

@@ -100,8 +100,8 @@ export function App() {
             {vistaEfectiva === 'inventario' && (
               <InventarioView searchQuery={searchQuery} onStockChanged={refreshAlerts} />
             )}
-            {vistaEfectiva === 'cortes' && <CortesView />}
-            {vistaEfectiva === 'empleados' && <EmpleadosView />}
+            {vistaEfectiva === 'cortes' && <CortesView searchQuery={searchQuery} />}
+            {vistaEfectiva === 'empleados' && <EmpleadosView searchQuery={searchQuery} />}
           </motion.div>
         </AnimatePresence>
       </Shell>
