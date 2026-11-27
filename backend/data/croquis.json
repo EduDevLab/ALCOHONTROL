@@ -1,50 +1,115 @@
 {
-  "actualizadoEn": "2026-11-24T23:35:00.875Z",
+  "actualizadoEn": "2026-11-25T05:19:48.299Z",
+  "canvasWidth": 1160,
+  "canvasHeight": 900,
   "zonas": [
     {
       "id": "bodega",
       "nombre": "Bodega",
-      "x": 40,
-      "y": 40,
-      "width": 320,
-      "height": 220,
-      "productos": []
+      "x": 0,
+      "y": 0,
+      "width": 1160,
+      "height": 180,
+      "productos": [
+        1,
+        2,
+        3,
+        4
+      ]
     },
     {
       "id": "refrigeradores",
-      "nombre": "Refrigeradores",
-      "x": 400,
-      "y": 40,
-      "width": 360,
-      "height": 220,
-      "productos": []
-    },
-    {
-      "id": "anaquel",
-      "nombre": "Anaquel",
-      "x": 800,
-      "y": 40,
-      "width": 260,
-      "height": 220,
-      "productos": []
+      "nombre": "Refrigerador 1",
+      "x": 0,
+      "y": 180,
+      "width": 180,
+      "height": 90,
+      "productos": [
+        1,
+        2
+      ]
     },
     {
       "id": "mostrador",
       "nombre": "Mostrador",
-      "x": 40,
-      "y": 310,
-      "width": 500,
-      "height": 180,
-      "productos": []
+      "x": 10,
+      "y": 630,
+      "width": 390,
+      "height": 120,
+      "productos": [
+        9,
+        10
+      ]
     },
     {
       "id": "botanas",
       "nombre": "Botanas",
-      "x": 580,
-      "y": 310,
-      "width": 480,
-      "height": 180,
+      "x": 1030,
+      "y": 480,
+      "width": 120,
+      "height": 230,
+      "productos": [
+        6,
+        5,
+        7,
+        8
+      ]
+    },
+    {
+      "id": "zona-mwvo4foc",
+      "nombre": "Refrigerador2",
+      "x": 180,
+      "y": 180,
+      "width": 180,
+      "height": 90,
+      "productos": [
+        3,
+        4
+      ]
+    },
+    {
+      "id": "zona-mwvo4vk1",
+      "nombre": "Regrigerador3",
+      "x": 360,
+      "y": 180,
+      "width": 180,
+      "height": 90,
       "productos": []
+    },
+    {
+      "id": "zona-mwvo4y77",
+      "nombre": "Refrigerador4",
+      "x": 540,
+      "y": 180,
+      "width": 180,
+      "height": 90,
+      "productos": [
+        2
+      ]
+    },
+    {
+      "id": "zona-mwvo55yi",
+      "nombre": "Refrigerador5",
+      "x": 720,
+      "y": 180,
+      "width": 180,
+      "height": 90,
+      "productos": [
+        1
+      ]
+    },
+    {
+      "id": "zona-mwvo58ri",
+      "nombre": "Refrigerador6",
+      "x": 1030,
+      "y": 260,
+      "width": 120,
+      "height": 190,
+      "productos": [
+        1,
+        2,
+        3
+      ]
     }
   ]
 }
